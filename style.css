@@ -47,9 +47,14 @@ button {
 }
 
 .white {
-    background-color: #eee;
+    background-color: #d2a5a5;
 }
 
 .black {
-    background-color: #444;
+    background-color: #916b6b;
+}
+
+span {
+    font-size: 46px; /* Increased font size for larger pieces */
+    display: inline-block;
 }
