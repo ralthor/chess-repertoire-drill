@@ -6,14 +6,6 @@ document.getElementById('setBoard').addEventListener('click', function() {
 function getPieceUnicode(piece) {
     const pieces = {
         'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
-        'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
-    };
-    return pieces[piece] || '';
-}
-
-function getPieceUnicode(piece) {
-    const pieces = {
-        'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
         'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟'
     };
     return pieces[piece] || '';
