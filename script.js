@@ -1,7 +1,21 @@
+var globalBoard = null;
+
 document.getElementById('setBoard').addEventListener('click', function() {
     let fen = document.getElementById('fenInput').value;
     setupBoard(fen);
+    globalBoard = fen;
 });
+
+document.getElementById('move').addEventListener('click', function() {
+    let move = document.getElementById('moveInput').value;
+    var game = new Chess();
+    game.load(globalBoard);
+    game.move(move);
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+});
+
+
 
 function getPieceUnicode(piece) {
     const pieces = {
