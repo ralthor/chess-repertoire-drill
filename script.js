@@ -26,6 +26,10 @@ document.getElementById('flipToggle').addEventListener('change', function() {
     setupBoard(globalBoard);
 });
 
+document.getElementById('chessboard').addEventListener('contextmenu', function(e) {
+    e.preventDefault(); // This prevents the default context menu from showing
+});
+
 function getPieceUnicode(piece) {
     const pieces = {
         'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
@@ -49,7 +53,41 @@ function convertFenRankToUnicode(fenRank) {
     return unicodeRank;
 }
 
+var clickedSquare = null;
+var cellMap = new Map();
+var myevent = null;
+
+
+function boardClick(event) {
+    // if right click, return
+    if (event.which === 3) {
+        clickedSquare = null;
+        return false;
+    }
+    myevent = event;
+    let square = event.target.parentNode;
+    let cell = cellMap.get(square.id);
+    console.log(cell);
+    if (clickedSquare === null) {
+        clickedSquare = cell;
+    } else {
+        let move = clickedSquare.rank + clickedSquare.row + cell.rank + cell.row;
+        document.getElementById('moveInput').value = move;
+        clickedSquare = null;
+    }
+}
+
+class ChessCell {
+    constructor(row, rank, piece) {
+        this.row = row;
+        this.rank = rank;
+        this.piece = piece;
+        return this;
+    }
+}
+
 function setupBoard(fen) {
+    cellMap.clear();
     let boardElement = document.getElementById('chessboard');
     boardElement.innerHTML = ''; // Clear the boardElement
     let rows = fen.split(' ')[0].split('/');
@@ -66,26 +104,29 @@ function setupBoard(fen) {
         rowNames = rowNames.reverse();
         rankNames = rankNames.reverse();
         board = board.reverse();
-        // reverse each row in the board
         board.forEach((row, rowIndex) => {
             board[rowIndex] = row.split('').reverse().join('');
         });
     }
-    console.log(board);
     
     board.forEach((row, rowIndex) => {
         let cells = row.split('');
-        cells.forEach(cell => {
-                let square = document.createElement('div');
-                square.className = cellIsWhite ? 'white' : 'black';
-                if (cell !== '.') {
-                    let piece = document.createElement('span');
-                    piece.innerHTML = getPieceUnicode(cell);
-                    piece.style.color = (cell === cell.toUpperCase()) ? 'white' : 'black';
-                    square.appendChild(piece);
-                }
-                boardElement.appendChild(square);
-                cellIsWhite = !cellIsWhite;
+        cells.forEach((cell, cellIndex) => {
+            cellObject = new ChessCell(rowNames[rowIndex], rankNames[cellIndex], cell);
+            let square = document.createElement('div');
+            id = rankNames[cellIndex] + rowNames[rowIndex];
+            square.setAttribute('id', id);
+            square.className = cellIsWhite ? 'white' : 'black';
+            cellMap.set(id, cellObject);
+            square.addEventListener('click', boardClick);
+            if (cell !== '.') {
+                let piece = document.createElement('span');
+                piece.innerHTML = getPieceUnicode(cell);
+                piece.style.color = (cell === cell.toUpperCase()) ? 'white' : 'black';
+                square.appendChild(piece);
+            }
+            boardElement.appendChild(square);
+            cellIsWhite = !cellIsWhite;
         });
         cellIsWhite = !cellIsWhite;
     });
