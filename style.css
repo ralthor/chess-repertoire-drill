@@ -58,3 +58,20 @@ span {
     font-size: 46px; /* Increased font size for larger pieces */
     display: inline-block;
 }
+
+#boardControls {
+    margin-top: 20px; /* Adjust as needed */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#boardControls label {
+    margin-right: 10px;
+    color: #ffffff; /* Adjust based on your theme */
+}
+
+#flipToggle {
+    transform: scale(1.5); /* Makes the toggle larger */
+    cursor: pointer;
+}

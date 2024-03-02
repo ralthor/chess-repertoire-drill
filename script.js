@@ -1,4 +1,5 @@
 var globalBoard = null;
+var whiteView = true;
 
 document.getElementById('setBoard').addEventListener('click', function() {
     let fen = document.getElementById('fenInput').value;
@@ -15,7 +16,15 @@ document.getElementById('move').addEventListener('click', function() {
     setupBoard(globalBoard);
 });
 
-
+document.getElementById('flipToggle').addEventListener('change', function() {
+    const chessboard = document.getElementById('chessboard');
+    if (this.checked) {
+        whiteView = false;
+    } else {
+        whiteView = true;
+    }
+    setupBoard(globalBoard);
+});
 
 function getPieceUnicode(piece) {
     const pieces = {
@@ -25,34 +34,59 @@ function getPieceUnicode(piece) {
     return pieces[piece] || '';
 }
 
-function setupBoard(fen) {
-    let board = document.getElementById('chessboard');
-    board.innerHTML = ''; // Clear the board
-    let rows = fen.split(' ')[0].split('/');
-    let totalSquares = 0; // Keep track of total squares added to ensure proper coloring
+function convertFenRankToUnicode(fenRank) {
+    let unicodeRank = '';
+    for (let i = 0; i < fenRank.length; i++) {
+        let piece = fenRank[i];
+        if (!isNaN(piece)) {
+            for (let j = 0; j < parseInt(piece); j++) {
+                unicodeRank += '.';
+            }
+        } else {
+            unicodeRank += piece;
+        }
+    }
+    return unicodeRank;
+}
 
+function setupBoard(fen) {
+    let boardElement = document.getElementById('chessboard');
+    boardElement.innerHTML = ''; // Clear the boardElement
+    let rows = fen.split(' ')[0].split('/');
+
+    let board = new Array();
     rows.forEach((row, rowIndex) => {
+        board.push(convertFenRankToUnicode(row));
+    });
+    
+    let rowNames = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    let rankNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    let cellIsWhite = true;
+    if (!whiteView) {
+        rowNames = rowNames.reverse();
+        rankNames = rankNames.reverse();
+        board = board.reverse();
+        // reverse each row in the board
+        board.forEach((row, rowIndex) => {
+            board[rowIndex] = row.split('').reverse().join('');
+        });
+    }
+    console.log(board);
+    
+    board.forEach((row, rowIndex) => {
         let cells = row.split('');
         cells.forEach(cell => {
-            if (!isNaN(cell)) { // If the cell is a number, it represents empty squares
-                for (let i = 0; i < parseInt(cell); i++) {
-                    let square = document.createElement('div');
-                    square.className = totalSquares % 2 === 0 ? 'white' : 'black';
-                    board.appendChild(square);
-                    totalSquares++;
-                }
-            } else {
                 let square = document.createElement('div');
-                square.className = totalSquares % 2 === 0 ? 'white' : 'black';
-                let piece = document.createElement('span');
-                piece.innerHTML = getPieceUnicode(cell);
-                piece.style.color = (cell === cell.toUpperCase()) ? 'white' : 'black'; // Upper case for white, lower case for black
-                square.appendChild(piece);
-                board.appendChild(square);
-                totalSquares++;
-            }
-            if (totalSquares % 8 === 0 && !isNaN(cell)) totalSquares++; // Adjust for new rows
+                square.className = cellIsWhite ? 'white' : 'black';
+                if (cell !== '.') {
+                    let piece = document.createElement('span');
+                    piece.innerHTML = getPieceUnicode(cell);
+                    piece.style.color = (cell === cell.toUpperCase()) ? 'white' : 'black';
+                    square.appendChild(piece);
+                }
+                boardElement.appendChild(square);
+                cellIsWhite = !cellIsWhite;
         });
-        if (rows.length > 0) totalSquares++; // Adjust at the end of each row to maintain color pattern
+        cellIsWhite = !cellIsWhite;
     });
 }
