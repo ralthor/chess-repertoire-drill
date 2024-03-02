@@ -58,21 +58,29 @@ var cellMap = new Map();
 var myevent = null;
 
 
-function boardClick(event) {
+function boardClick(event, target) {
     // if right click, return
     if (event.which === 3) {
         clickedSquare = null;
         return false;
     }
     myevent = event;
-    let square = event.target.parentNode;
+    let square = target;
     let cell = cellMap.get(square.id);
     console.log(cell);
     if (clickedSquare === null) {
         clickedSquare = cell;
     } else {
-        let move = clickedSquare.rank + clickedSquare.row + cell.rank + cell.row;
-        document.getElementById('moveInput').value = move;
+        let move = {
+            from: clickedSquare.rank + clickedSquare.row,
+            to: cell.rank + cell.row
+        };
+        var game = new Chess();
+        game.load(globalBoard);
+        game.move(move);
+        globalBoard = game.fen();
+        setupBoard(globalBoard);
+    
         clickedSquare = null;
     }
 }
@@ -118,7 +126,9 @@ function setupBoard(fen) {
             square.setAttribute('id', id);
             square.className = cellIsWhite ? 'white' : 'black';
             cellMap.set(id, cellObject);
-            square.addEventListener('click', boardClick);
+            square.addEventListener('click', function(event) {
+                boardClick(event, square);
+            });
             if (cell !== '.') {
                 let piece = document.createElement('span');
                 piece.innerHTML = getPieceUnicode(cell);
