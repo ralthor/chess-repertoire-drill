@@ -1,5 +1,7 @@
 var globalBoard = null;
 var whiteView = true;
+var clickedSquare = null;
+var cellMap = new Map();
 
 document.getElementById('setBoard').addEventListener('click', function() {
     let fen = document.getElementById('fenInput').value;
@@ -28,6 +30,8 @@ document.getElementById('flipToggle').addEventListener('change', function() {
 
 document.getElementById('chessboard').addEventListener('contextmenu', function(e) {
     e.preventDefault(); // This prevents the default context menu from showing
+    clickedSquare = null;
+    setupBoard(globalBoard);
 });
 
 function getPieceUnicode(piece) {
@@ -53,36 +57,32 @@ function convertFenRankToUnicode(fenRank) {
     return unicodeRank;
 }
 
-var clickedSquare = null;
-var cellMap = new Map();
-var myevent = null;
-
-
 function boardClick(event, target) {
-    // if right click, return
-    if (event.which === 3) {
-        clickedSquare = null;
-        return false;
-    }
-    myevent = event;
     let square = target;
     let cell = cellMap.get(square.id);
     console.log(cell);
     if (clickedSquare === null) {
         clickedSquare = cell;
-    } else {
-        let move = {
-            from: clickedSquare.rank + clickedSquare.row,
-            to: cell.rank + cell.row
-        };
-        var game = new Chess();
-        game.load(globalBoard);
-        game.move(move);
-        globalBoard = game.fen();
-        setupBoard(globalBoard);
-    
-        clickedSquare = null;
+        square.className = 'selected';
+        return;
     }
+    let move = {
+        from: clickedSquare.rank + clickedSquare.row,
+        to: cell.rank + cell.row
+    };
+    var game = new Chess();
+    game.load(globalBoard);
+    let moveResult = game.move(move);
+    console.log(moveResult);
+    if (!moveResult) {
+        clickedSquare = null;
+        setupBoard(globalBoard);
+        return;
+    }
+    clickedSquare = null;
+
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
 }
 
 class ChessCell {
@@ -124,7 +124,11 @@ function setupBoard(fen) {
             let square = document.createElement('div');
             id = rankNames[cellIndex] + rowNames[rowIndex];
             square.setAttribute('id', id);
-            square.className = cellIsWhite ? 'white' : 'black';
+            if (clickedSquare !== null && clickedSquare.rank + clickedSquare.row === cellObject.rank + cellObject.row) {
+                square.className = 'selected';
+            }
+            else 
+                square.className = cellIsWhite ? 'white' : 'black';
             cellMap.set(id, cellObject);
             square.addEventListener('click', function(event) {
                 boardClick(event, square);
