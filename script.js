@@ -1,13 +1,72 @@
-var globalBoard = null;
+class ChessCell {
+    constructor(row, rank, piece) {
+        this.row = row;
+        this.rank = rank;
+        this.piece = piece;
+        return this;
+    }
+}
+
+var globalBoard = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+var startingFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 var whiteView = true;
 var clickedSquare = null;
 var cellMap = new Map();
+var moveNumber = 1;
+var pgnHistory = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupBoard(globalBoard);
+    document.getElementById('fenInput').value = globalBoard;
+    document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
+});
+
+
 
 document.getElementById('setBoard').addEventListener('click', function() {
     let fen = document.getElementById('fenInput').value;
     setupBoard(fen);
     globalBoard = fen;
 });
+
+document.getElementById('loadPgn').addEventListener('click', function() {
+    document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
+    let pgn = document.getElementById('pgnText').value;
+    var game = new Chess();
+    game.load_pgn(pgn);
+    pgnHistory = game.history();
+    moveNumber = 0;
+    game.load(startingFen);
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+});
+
+document.getElementById('nextMove').addEventListener('click', function() {
+    if (moveNumber >= pgnHistory.length) {
+        return;
+    }
+    var game = new Chess();
+    game.load(globalBoard);
+    game.move(pgnHistory[moveNumber]);
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+    moveNumber++;
+});
+
+document.getElementById('prevMove').addEventListener('click', function() {
+    if (moveNumber <= 0) {
+        return;
+    }
+    moveNumber -= 1;
+    var game = new Chess();
+    game.load(startingFen);
+    for (let i = 0; i < moveNumber; i++) {
+        game.move(pgnHistory[i]);
+    }
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+});
+
 
 document.getElementById('move').addEventListener('click', function() {
     let move = document.getElementById('moveInput').value;
@@ -83,15 +142,6 @@ function boardClick(event, target) {
 
     globalBoard = game.fen();
     setupBoard(globalBoard);
-}
-
-class ChessCell {
-    constructor(row, rank, piece) {
-        this.row = row;
-        this.rank = rank;
-        this.piece = piece;
-        return this;
-    }
 }
 
 function setupBoard(fen) {
