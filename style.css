@@ -79,3 +79,47 @@ span {
     transform: scale(1.5); /* Makes the toggle larger */
     cursor: pointer;
 }
+
+#boardContainer {
+    display: flex;
+    align-items: stretch; /* This will ensure the children have equal height */
+}
+
+#moveList {
+    width: 300px; /* Or whatever width you prefer */
+    background-color: #1c2631;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* These two lines center the content inside the div */
+    display: flex;
+    flex-direction: column; /* Stack elements vertically */
+    padding: 5px; /* Add some padding around the content */
+    margin-left: 10px;
+    margin-top: 0px;
+}
+
+#pgnText {
+    width: 100%; /* Ensure it fills the container width */
+    height: 100%; /* Ensure it fills the container height */
+    flex-grow: 1; /* Allow the textarea to fill the container and adjust with content */
+    background-color: #3f3a58; /* Background color for contrast */
+    border: none; /* Remove default border */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    padding: 10px; /* Add some padding inside the textarea */
+    resize: none; /* Prevent the user from resizing the textarea */
+    margin: 0; /* Remove default margins */
+    overflow-y: auto; /* Add scroll if text is too long */
+    color: #e1c5c5; /* Text color */
+    /* align text to the left */
+    text-align: left;
+}
+
+#pgnControls {
+    display: flex;
+    justify-content: space-between; /* Space out the buttons */
+}
+
+#pgnControls button {
+    padding: 5px 10px; /* Padding inside the buttons */
+    cursor: pointer; /* Cursor hint for clickable elements */
+}
