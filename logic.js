@@ -260,10 +260,12 @@ class PgnRenderer {
             // Check if this move is on current path
             const isCurrent = child === this.navigator.currentNode;
             const isOnPath = this.isNodeOnCurrentPath(child);
+            const isBranchPoint = child.children.length > 1;
             
             let className = 'pgn-move';
             if (isCurrent) className += ' pgn-move-current';
             else if (isOnPath) className += ' pgn-move-on-path';
+            if (isBranchPoint) className += ' pgn-move-branch';
             
             if (isVariation) {
                 html += '<span class="pgn-variation">(';

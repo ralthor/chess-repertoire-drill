@@ -91,6 +91,7 @@ function renderPgnDisplay() {
 
 function updateVariationButtons() {
     const container = document.getElementById('variationButtons');
+    const indicator = document.getElementById('branchIndicator');
     if (!container || !moveNavigator) return;
     
     container.innerHTML = '';
@@ -98,7 +99,16 @@ function updateVariationButtons() {
     const availableMoves = moveNavigator.getAvailableMoves();
     if (availableMoves.length <= 1) {
         container.style.display = 'none';
+        if (indicator) {
+            indicator.classList.remove('active');
+        }
         return;
+    }
+    
+    // Show branch indicator
+    if (indicator) {
+        indicator.classList.add('active');
+        indicator.innerHTML = `<strong>Branch point!</strong> ${availableMoves.length} options available. Use <kbd>Up/Down</kbd> arrows or click below:`;
     }
     
     container.style.display = 'flex';

@@ -58,7 +58,7 @@ button {
     background-color: #60601f;
 }
 
-span {
+#chessboard span {
     font-size: 46px; /* Increased font size for larger pieces */
     display: inline-block;
 }
@@ -124,6 +124,31 @@ span {
     cursor: pointer; /* Cursor hint for clickable elements */
 }
 
+/* Branch indicator */
+#branchIndicator {
+    display: none;
+    padding: 8px 12px;
+    margin-top: 10px;
+    background-color: #5a4a2a;
+    border: 1px solid #a90;
+    border-radius: 5px;
+    color: #ff0;
+    font-size: 13px;
+    text-align: center;
+}
+
+#branchIndicator.active {
+    display: block;
+}
+
+#branchIndicator kbd {
+    background-color: #333;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #666;
+    font-family: monospace;
+}
+
 /* Variation buttons */
 #variationButtons {
     display: none;
@@ -187,6 +212,17 @@ span {
 .pgn-move-current {
     background-color: #6a8a4a;
     font-weight: bold;
+}
+
+.pgn-move-branch {
+    background-color: #8a6a4a;
+    border: 1px dashed #caa;
+}
+
+.pgn-move-current.pgn-move-branch {
+    background-color: #6a8a4a;
+    border: 2px solid #ff0;
+    box-shadow: 0 0 5px #ff0;
 }
 
 .pgn-move-on-path {
