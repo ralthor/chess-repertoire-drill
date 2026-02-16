@@ -1,46 +1,60 @@
+:root {
+    --square-size: 50px;
+    --piece-size: 46px;
+}
+
 body {
-    background-color: #131a22; /* Dark blue background for a nightly theme */
-    color: #ffffff; /* White text color for better visibility */
-    font-family: Arial, sans-serif; /* Optional: sets a nice, readable font */
+    background-color: #131a22;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 input, button {
-    margin: 10px;
+    margin: 5px;
     padding: 10px;
     border-radius: 5px;
     border: none;
+    font-size: 14px;
 }
 
 input {
     width: 200px;
+    max-width: 90vw;
 }
 
 button {
-    background-color: #204969; /* Darker shade for button to fit the nightly theme */
-    color: #ffffff; /* White text for the button */
+    background-color: #204969;
+    color: #ffffff;
     cursor: pointer;
+    min-height: 44px; /* Touch-friendly minimum */
+}
+
+button:active {
+    background-color: #305979;
 }
 
 #fenInput {
-    color: #000; /* Ensure input text is black for readability */
+    color: #000;
 }
 
 #chessboard {
     display: grid;
-    grid-template-columns: repeat(8, 50px);
-    grid-template-rows: repeat(8, 50px);
-    gap: 1px;
+    grid-template-columns: repeat(8, var(--square-size));
+    grid-template-rows: repeat(8, var(--square-size));
+    gap: 0;
+    touch-action: manipulation; /* Prevent zoom on double-tap */
 }
 
 .white, .black, .selected {
-    width: 50px;
-    height: 50px;
+    width: var(--square-size);
+    height: var(--square-size);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -59,69 +73,87 @@ button {
 }
 
 #chessboard span {
-    font-size: 46px; /* Increased font size for larger pieces */
+    font-size: var(--piece-size);
     display: inline-block;
+    line-height: 1;
 }
 
 #boardControls {
-    margin-top: 20px; /* Adjust as needed */
+    margin-top: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 #boardControls label {
     margin-right: 10px;
-    color: #ffffff; /* Adjust based on your theme */
+    color: #ffffff;
 }
 
 #flipToggle {
-    transform: scale(1.5); /* Makes the toggle larger */
+    transform: scale(1.5);
     cursor: pointer;
+    width: auto;
+    margin: 5px;
 }
 
 #boardContainer {
     display: flex;
-    align-items: stretch; /* This will ensure the children have equal height */
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 800px;
+}
+
+#chessboardContainer {
+    flex-shrink: 0;
 }
 
 #moveList {
-    width: 300px; /* Or whatever width you prefer */
+    width: 300px;
+    min-width: 250px;
+    max-width: 100%;
     background-color: #1c2631;
     display: flex;
-    justify-content: center;
-    align-items: center; /* These two lines center the content inside the div */
-    display: flex;
-    flex-direction: column; /* Stack elements vertically */
-    padding: 5px; /* Add some padding around the content */
-    margin-left: 10px;
-    margin-top: 0px;
+    flex-direction: column;
+    padding: 10px;
+    box-sizing: border-box;
+    border-radius: 5px;
 }
 
 #pgnText {
-    width: 100%; /* Ensure it fills the container width */
-    height: 100%; /* Ensure it fills the container height */
-    flex-grow: 1; /* Allow the textarea to fill the container and adjust with content */
-    background-color: #3f3a58; /* Background color for contrast */
-    border: none; /* Remove default border */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    padding: 10px; /* Add some padding inside the textarea */
-    resize: none; /* Prevent the user from resizing the textarea */
-    margin: 0; /* Remove default margins */
-    overflow-y: auto; /* Add scroll if text is too long */
-    color: #e1c5c5; /* Text color */
-    /* align text to the left */
+    width: 100%;
+    min-height: 100px;
+    flex-grow: 1;
+    background-color: #3f3a58;
+    border: none;
+    box-sizing: border-box;
+    padding: 10px;
+    resize: none;
+    margin: 0;
+    overflow-y: auto;
+    color: #e1c5c5;
     text-align: left;
+    font-size: 14px;
+    border-radius: 5px;
 }
 
 #pgnControls {
     display: flex;
-    justify-content: space-between; /* Space out the buttons */
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
 }
 
 #pgnControls button {
-    padding: 5px 10px; /* Padding inside the buttons */
-    cursor: pointer; /* Cursor hint for clickable elements */
+    padding: 10px 15px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 80px;
 }
 
 /* Branch indicator */
@@ -158,6 +190,7 @@ button {
     padding: 5px;
     background-color: #2a3441;
     border-radius: 5px;
+    justify-content: center;
 }
 
 #variationButtons:empty {
@@ -165,7 +198,7 @@ button {
 }
 
 .variation-btn {
-    padding: 5px 10px;
+    padding: 10px 15px;
     margin: 0;
     background-color: #3f5a7a;
     border: 1px solid #5a7a9a;
@@ -173,9 +206,10 @@ button {
     color: #fff;
     cursor: pointer;
     font-size: 14px;
+    min-height: 44px;
 }
 
-.variation-btn:hover {
+.variation-btn:hover, .variation-btn:active {
     background-color: #4a6a8a;
 }
 
@@ -194,18 +228,19 @@ button {
     margin-top: 10px;
     border-radius: 5px;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.8;
     box-sizing: border-box;
 }
 
 .pgn-move {
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 4px 6px;
     border-radius: 3px;
     transition: background-color 0.15s;
+    display: inline-block;
 }
 
-.pgn-move:hover {
+.pgn-move:hover, .pgn-move:active {
     background-color: #4a5a6a;
 }
 
@@ -242,6 +277,8 @@ button {
     border-radius: 5px;
     font-size: 12px;
     color: #8a9aaa;
+    text-align: center;
+    max-width: 90vw;
 }
 
 #keyboardHelp strong {
@@ -250,4 +287,160 @@ button {
 
 #keyboardHelp span {
     margin: 0 5px;
+}
+
+/* Move input section */
+#moveInput {
+    width: 150px;
+}
+
+/* ==================== */
+/* MOBILE RESPONSIVE    */
+/* ==================== */
+
+@media screen and (max-width: 600px) {
+    body {
+        padding: 5px;
+        justify-content: flex-start;
+        overflow-x: hidden;
+    }
+
+    #boardContainer {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    #chessboardContainer {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #chessboard {
+        --mobile-square: calc((100vw - 20px) / 8);
+        grid-template-columns: repeat(8, var(--mobile-square));
+        grid-template-rows: repeat(8, var(--mobile-square));
+        width: calc(100vw - 20px);
+        max-width: 400px;
+    }
+
+    #chessboard .white,
+    #chessboard .black,
+    #chessboard .selected {
+        width: var(--mobile-square);
+        height: var(--mobile-square);
+        max-width: 50px;
+        max-height: 50px;
+    }
+
+    #chessboard span {
+        font-size: calc(var(--mobile-square) * 0.85);
+    }
+
+    #moveList {
+        width: calc(100vw - 20px);
+        max-width: 400px;
+        margin-top: 10px;
+    }
+
+    #pgnText {
+        min-height: 80px;
+        font-size: 13px;
+    }
+
+    #pgnControls {
+        flex-wrap: nowrap;
+    }
+
+    #pgnControls button {
+        padding: 12px 8px;
+        font-size: 13px;
+        min-width: 60px;
+    }
+
+    input {
+        width: calc(100vw - 40px);
+        max-width: 300px;
+        box-sizing: border-box;
+    }
+
+    #fenInput {
+        font-size: 12px;
+    }
+
+    #moveInput {
+        width: calc(100vw - 40px);
+        max-width: 200px;
+    }
+
+    button {
+        max-width: calc(100vw - 40px);
+    }
+
+    /* Hide keyboard help on mobile (no keyboard) */
+    #keyboardHelp {
+        display: none;
+    }
+
+    #branchIndicator {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    #branchIndicator kbd {
+        display: none;
+    }
+
+    #branchIndicator.active::after {
+        content: " Tap a move below:";
+    }
+
+    .variation-btn {
+        padding: 12px 18px;
+        font-size: 16px;
+    }
+
+    #pgnDisplay {
+        max-height: 150px;
+        line-height: 2;
+    }
+
+    .pgn-move {
+        padding: 6px 8px;
+    }
+}
+
+/* Cap the board size on mobile when screen is wide enough */
+@media screen and (max-width: 600px) and (min-width: 450px) {
+    #chessboard {
+        --mobile-square: 50px;
+        grid-template-columns: repeat(8, 50px);
+        grid-template-rows: repeat(8, 50px);
+        width: 400px;
+    }
+
+    #chessboard .white,
+    #chessboard .black,
+    #chessboard .selected {
+        width: 50px;
+        height: 50px;
+    }
+
+    #chessboard span {
+        font-size: 42px;
+    }
+}
+
+/* Larger phones / small tablets in landscape */
+@media screen and (min-width: 601px) and (max-width: 900px) {
+    :root {
+        --square-size: 45px;
+        --piece-size: 40px;
+    }
+
+    #moveList {
+        width: 280px;
+    }
 }
