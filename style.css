@@ -72,10 +72,18 @@ button:active {
     background-color: #60601f;
 }
 
-#chessboard span {
-    font-size: var(--piece-size);
-    display: inline-block;
-    line-height: 1;
+.piece {
+    width: 90%;
+    height: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.piece svg {
+    width: 100%;
+    height: 100%;
 }
 
 #boardControls {
