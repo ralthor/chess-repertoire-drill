@@ -17,6 +17,34 @@ var cellMap = new Map();
 var moveNavigator = null;
 var renderer = null;
 var nodeMap = new Map();
+var wrongMoveSquares = null;
+
+function clearMoveFeedback() {
+    wrongMoveSquares = null;
+    const warning = document.getElementById('moveWarning');
+    if (!warning) return;
+    warning.textContent = '';
+    warning.classList.remove('active');
+}
+
+function showMoveWarning(message, wrongMove = null) {
+    wrongMoveSquares = wrongMove ? { from: wrongMove.from, to: wrongMove.to } : null;
+    const warning = document.getElementById('moveWarning');
+    if (!warning) return;
+    warning.textContent = message;
+    warning.classList.add('active');
+}
+
+function syncUiToNavigator(clearFeedback = true) {
+    if (!moveNavigator) return;
+    if (clearFeedback) {
+        clearMoveFeedback();
+    }
+    globalBoard = moveNavigator.getCurrentFen();
+    setupBoard(globalBoard);
+    renderPgnDisplay();
+    updateVariationButtons();
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     setupBoard(globalBoard);
@@ -25,10 +53,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
+    // Auto-load the PGN in the textarea on page load using the same load flow.
+    loadPgnFromTextarea();
 });
 
 document.getElementById('setBoard').addEventListener('click', function() {
     let fen = document.getElementById('fenInput').value;
+    clearMoveFeedback();
     setupBoard(fen);
     globalBoard = fen;
 });
@@ -49,18 +80,12 @@ function loadPgnFromTextarea() {
     nodeMap = renderer.buildNodeMap();
     
     // Update board and rendered PGN
-    globalBoard = moveNavigator.getCurrentFen();
-    setupBoard(globalBoard);
-    renderPgnDisplay();
-    updateVariationButtons();
+    syncUiToNavigator();
 }
 
 function onPgnMoveClick(node) {
     moveNavigator.goToNode(node);
-    globalBoard = moveNavigator.getCurrentFen();
-    setupBoard(globalBoard);
-    renderPgnDisplay();
-    updateVariationButtons();
+    syncUiToNavigator();
 }
 
 function renderPgnDisplay() {
@@ -123,10 +148,7 @@ function updateVariationButtons() {
         btn.title = moveInfo.isMainLine ? 'Main line' : `Variation ${idx}`;
         btn.addEventListener('click', () => {
             moveNavigator.next(idx);
-            globalBoard = moveNavigator.getCurrentFen();
-            setupBoard(globalBoard);
-            renderPgnDisplay();
-            updateVariationButtons();
+            syncUiToNavigator();
         });
         container.appendChild(btn);
     });
@@ -137,10 +159,7 @@ document.getElementById('nextMove').addEventListener('click', function() {
         return;
     }
     moveNavigator.next(0); // Main line by default
-    globalBoard = moveNavigator.getCurrentFen();
-    setupBoard(globalBoard);
-    renderPgnDisplay();
-    updateVariationButtons();
+    syncUiToNavigator();
 });
 
 document.getElementById('prevMove').addEventListener('click', function() {
@@ -148,10 +167,7 @@ document.getElementById('prevMove').addEventListener('click', function() {
         return;
     }
     moveNavigator.prev();
-    globalBoard = moveNavigator.getCurrentFen();
-    setupBoard(globalBoard);
-    renderPgnDisplay();
-    updateVariationButtons();
+    syncUiToNavigator();
 });
 
 // Keyboard navigation
@@ -168,20 +184,14 @@ document.addEventListener('keydown', function(e) {
             e.preventDefault();
             if (moveNavigator.canGoNext()) {
                 moveNavigator.next(0);
-                globalBoard = moveNavigator.getCurrentFen();
-                setupBoard(globalBoard);
-                renderPgnDisplay();
-                updateVariationButtons();
+                syncUiToNavigator();
             }
             break;
         case 'ArrowLeft':
             e.preventDefault();
             if (moveNavigator.canGoPrev()) {
                 moveNavigator.prev();
-                globalBoard = moveNavigator.getCurrentFen();
-                setupBoard(globalBoard);
-                renderPgnDisplay();
-                updateVariationButtons();
+                syncUiToNavigator();
             }
             break;
         case 'ArrowUp':
@@ -197,10 +207,7 @@ document.addEventListener('keydown', function(e) {
         case 'Home':
             e.preventDefault();
             moveNavigator.goToStart();
-            globalBoard = moveNavigator.getCurrentFen();
-            setupBoard(globalBoard);
-            renderPgnDisplay();
-            updateVariationButtons();
+            syncUiToNavigator();
             break;
     }
 });
@@ -216,10 +223,7 @@ function switchVariation(direction) {
     
     if (newIndex >= 0 && newIndex < parent.children.length) {
         moveNavigator.goToNode(parent.children[newIndex]);
-        globalBoard = moveNavigator.getCurrentFen();
-        setupBoard(globalBoard);
-        renderPgnDisplay();
-        updateVariationButtons();
+        syncUiToNavigator();
     }
 }
 
@@ -288,27 +292,53 @@ function convertFenRankToUnicode(fenRank) {
 function boardClick(event, target) {
     let square = target;
     let cell = cellMap.get(square.id);
-    console.log(cell);
+    if (!cell) return;
+
     if (clickedSquare === null) {
+        clearMoveFeedback();
         clickedSquare = cell;
         square.className = 'selected';
         return;
     }
+
     let move = {
         from: clickedSquare.rank + clickedSquare.row,
         to: cell.rank + cell.row
     };
+
     var game = new Chess();
     game.load(globalBoard);
     let moveResult = game.move(move);
-    console.log(moveResult);
     if (!moveResult) {
         clickedSquare = null;
         setupBoard(globalBoard);
         return;
     }
+
     clickedSquare = null;
 
+    if (moveNavigator && moveNavigator.currentNode) {
+        const continuations = moveNavigator.currentNode.children || [];
+        if (continuations.length === 0) {
+            showMoveWarning('No more PGN moves are available from this position.', move);
+            syncUiToNavigator(false);
+            return;
+        }
+
+        const nextFen = game.fen();
+        const matchingNode = continuations.find(child => child.fen === nextFen);
+        if (matchingNode) {
+            moveNavigator.goToNode(matchingNode);
+            syncUiToNavigator();
+            return;
+        }
+
+        showMoveWarning(`Move ${moveResult.san} is not in this PGN branch.`, move);
+        syncUiToNavigator(false);
+        return;
+    }
+
+    clearMoveFeedback();
     globalBoard = game.fen();
     setupBoard(globalBoard);
 }
@@ -339,15 +369,18 @@ function setupBoard(fen) {
     board.forEach((row, rowIndex) => {
         let cells = row.split('');
         cells.forEach((cell, cellIndex) => {
-            cellObject = new ChessCell(rowNames[rowIndex], rankNames[cellIndex], cell);
+            let cellObject = new ChessCell(rowNames[rowIndex], rankNames[cellIndex], cell);
             let square = document.createElement('div');
-            id = rankNames[cellIndex] + rowNames[rowIndex];
+            let id = rankNames[cellIndex] + rowNames[rowIndex];
             square.setAttribute('id', id);
             if (clickedSquare !== null && clickedSquare.rank + clickedSquare.row === cellObject.rank + cellObject.row) {
                 square.className = 'selected';
             }
             else 
                 square.className = cellIsWhite ? 'white' : 'black';
+            if (wrongMoveSquares && (wrongMoveSquares.from === id || wrongMoveSquares.to === id)) {
+                square.classList.add('wrong-move');
+            }
             cellMap.set(id, cellObject);
             square.addEventListener('click', function(event) {
                 boardClick(event, square);
