@@ -35,10 +35,141 @@ function showMoveWarning(message, wrongMove = null) {
     warning.classList.add('active');
 }
 
+function normalizePromotionInput(input) {
+    if (!input) return null;
+    const value = input.trim().toLowerCase();
+    const map = {
+        q: 'q',
+        queen: 'q',
+        r: 'r',
+        rook: 'r',
+        b: 'b',
+        bishop: 'b',
+        n: 'n',
+        knight: 'n'
+    };
+    return map[value] || null;
+}
+
+function promptPromotionPiece(color) {
+    const colorLabel = color === 'w' ? 'White' : 'Black';
+    while (true) {
+        const rawChoice = window.prompt(
+            `${colorLabel} pawn promotion: choose q (queen), r (rook), b (bishop), or n (knight).`,
+            'q'
+        );
+        if (rawChoice === null) {
+            return null;
+        }
+        const promotion = normalizePromotionInput(rawChoice);
+        if (promotion) {
+            return promotion;
+        }
+        window.alert('Invalid promotion piece. Enter q, r, b, or n.');
+    }
+}
+
+function isPromotionMove(game, move) {
+    const piece = game.get(move.from);
+    if (!piece || piece.type !== 'p') {
+        return false;
+    }
+    if (piece.color !== game.turn()) {
+        return false;
+    }
+    return (piece.color === 'w' && move.to[1] === '8') || (piece.color === 'b' && move.to[1] === '1');
+}
+
+function isMoveAdditionUnlocked() {
+    const unlockToggle = document.getElementById('unlockAddMoves');
+    return !!(unlockToggle && unlockToggle.checked);
+}
+
+function updateUnlockControlState() {
+    const control = document.getElementById('unlockControl');
+    if (!control) return;
+    control.classList.toggle('unlocked', isMoveAdditionUnlocked());
+}
+
+function addMoveToTree(moveSan, fen) {
+    if (!moveNavigator || !moveNavigator.currentNode) return null;
+
+    const parent = moveNavigator.currentNode;
+    const existing = parent.children.find(child => child.fen === fen);
+    if (existing) {
+        moveNavigator.goToNode(existing);
+        return existing;
+    }
+
+    const newNode = new MoveNode(moveSan, fen);
+    parent.addChild(newNode);
+    moveNavigator.goToNode(newNode);
+    return newNode;
+}
+
+function formatMoveWithNumber(parentFen, sanMove) {
+    const game = new Chess();
+    game.load(parentFen);
+    const moveNumber = parseInt(parentFen.split(' ')[5], 10);
+    const prefix = game.turn() === 'w' ? `${moveNumber}. ` : `${moveNumber}... `;
+    return `${prefix}${sanMove}`;
+}
+
+function exportBranchFromTree(parentNode, childNode) {
+    if (!parentNode || !childNode || !childNode.move) {
+        return '';
+    }
+
+    const parts = [formatMoveWithNumber(parentNode.fen, childNode.move)];
+    const continuationText = exportFromNode(childNode);
+    if (continuationText) {
+        parts.push(continuationText);
+    }
+
+    return parts.join(' ');
+}
+
+function exportFromNode(node) {
+    if (!node || node.children.length === 0) {
+        return '';
+    }
+
+    const mainChild = node.children[0];
+    const parts = [formatMoveWithNumber(node.fen, mainChild.move)];
+    for (let i = 1; i < node.children.length; i++) {
+        const variationText = exportBranchFromTree(node, node.children[i]);
+        if (variationText) {
+            parts.push(`(${variationText})`);
+        }
+    }
+    const mainContinuation = exportFromNode(mainChild);
+    if (mainContinuation) {
+        parts.push(mainContinuation);
+    }
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function buildExportPgn() {
+    if (!moveNavigator || !moveNavigator.root) {
+        return '';
+    }
+    return exportFromNode(moveNavigator.root);
+}
+
+function exportPgnToTextarea() {
+    const textarea = document.getElementById('pgnText');
+    if (!textarea) return;
+    textarea.value = buildExportPgn();
+}
+
 function syncUiToNavigator(clearFeedback = true) {
     if (!moveNavigator) return;
     if (clearFeedback) {
         clearMoveFeedback();
+    }
+    if (renderer) {
+        nodeMap = renderer.buildNodeMap();
     }
     globalBoard = moveNavigator.getCurrentFen();
     setupBoard(globalBoard);
@@ -50,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupBoard(globalBoard);
     document.getElementById('fenInput').value = globalBoard;
     document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
+    updateUnlockControlState();
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
@@ -66,6 +198,14 @@ document.getElementById('setBoard').addEventListener('click', function() {
 
 document.getElementById('loadPgn').addEventListener('click', function() {
     loadPgnFromTextarea();
+});
+
+document.getElementById('unlockAddMoves').addEventListener('change', function() {
+    updateUnlockControlState();
+});
+
+document.getElementById('exportPgn').addEventListener('click', function() {
+    exportPgnToTextarea();
 });
 
 function loadPgnFromTextarea() {
@@ -308,7 +448,20 @@ function boardClick(event, target) {
 
     var game = new Chess();
     game.load(globalBoard);
-    let moveResult = game.move(move);
+    let moveToPlay = {
+        from: move.from,
+        to: move.to
+    };
+    if (isPromotionMove(game, moveToPlay)) {
+        const promotion = promptPromotionPiece(game.turn());
+        if (!promotion) {
+            clickedSquare = null;
+            setupBoard(globalBoard);
+            return;
+        }
+        moveToPlay.promotion = promotion;
+    }
+    let moveResult = game.move(moveToPlay);
     if (!moveResult) {
         clickedSquare = null;
         setupBoard(globalBoard);
@@ -319,17 +472,23 @@ function boardClick(event, target) {
 
     if (moveNavigator && moveNavigator.currentNode) {
         const continuations = moveNavigator.currentNode.children || [];
-        if (continuations.length === 0) {
-            showMoveWarning('No more PGN moves are available from this position.', move);
-            syncUiToNavigator(false);
-            return;
-        }
-
         const nextFen = game.fen();
         const matchingNode = continuations.find(child => child.fen === nextFen);
         if (matchingNode) {
             moveNavigator.goToNode(matchingNode);
             syncUiToNavigator();
+            return;
+        }
+
+        if (isMoveAdditionUnlocked()) {
+            addMoveToTree(moveResult.san, nextFen);
+            syncUiToNavigator();
+            return;
+        }
+
+        if (continuations.length === 0) {
+            showMoveWarning('No more PGN moves are available from this position.', move);
+            syncUiToNavigator(false);
             return;
         }
 

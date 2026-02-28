@@ -169,6 +169,45 @@ button:active {
     min-width: 80px;
 }
 
+#editControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+#unlockControl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #2a3441;
+    border: 1px solid #3b4c60;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #d9e4f2;
+}
+
+#unlockControl input {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    transform: scale(1.15);
+}
+
+#unlockControl.unlocked {
+    background-color: #3b5f3b;
+    border-color: #5a9a5a;
+    color: #e8ffe8;
+}
+
+#exportPgn {
+    min-width: 110px;
+    flex: 0 0 auto;
+}
+
 #moveWarning {
     display: none;
     margin-top: 10px;
@@ -387,6 +426,20 @@ button:active {
         padding: 12px 8px;
         font-size: 13px;
         min-width: 60px;
+    }
+
+    #editControls {
+        justify-content: space-between;
+    }
+
+    #unlockControl {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    #exportPgn {
+        padding: 12px 10px;
+        font-size: 13px;
     }
 
     input {
