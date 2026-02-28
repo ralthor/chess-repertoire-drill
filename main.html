@@ -7,8 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <input type="text" id="fenInput" placeholder="Enter FEN" value="r2qk2r/pp2bppp/2n1p3/3pPn2/3P2b1/2N1BN2/PP2BPPP/R2Q1RK1 w kq - 6 11" />
-    <button id="setBoard">Set Board</button>
     <div id="boardContainer">
         <div id="chessboardContainer">
             <div id="chessboard"></div>
@@ -18,20 +16,23 @@
             </div>
         </div>
         <div id="moveList">
-            <textarea id="pgnText">
-                1. e4 c6 2. d4 d5 3. e5 Bf5 4. Bd3 (4. Nf3 e6 5. Nc3 h6 6. Bd3 Bxd3 7. cxd3 Nd7 8. Bf4 c5 9. Qa4 c4 10. dxc4 dxc4 11. O-O f6) 4... e6 5. Bxf5 exf5 6. Nf3 c5 7. c3 cxd4 8. cxd4 Nc6 9. O-O Be7 10. Nc3 Nh6 11. h3 f6 12. Be3 fxe5 13. dxe5 Nf7 14. Nxd5 Nfxe5 15. Nxe5 Nxe5 16. Qa4+ Nd7 17. Rfe1 O-O 18. Nxe7+ Qxe7 19. Qc4+ Kh8 20. Bc5 Nxc5 21. Rxe7 Ne4 22. Rxb7 Nd2 23. Qf4 Ne4 24. f3 Nc5 25. Rb5 Nd3
-            </textarea>
+            <div id="importControls">
+                <button id="importPgnBtn">Import PGN</button>
+                <button id="importFenBtn">Import FEN</button>
+            </div>
             <div id="pgnControls">
-                <button id="loadPgn">Load...</button>
                 <button id="prevMove">Previous</button>
                 <button id="nextMove">Next</button>
+            </div>
+            <div id="exportControls">
+                <button id="exportPgn">Export PGN</button>
+                <button id="exportFen">Export FEN</button>
             </div>
             <div id="editControls">
                 <label id="unlockControl" for="unlockAddMoves">
                     <input type="checkbox" id="unlockAddMoves" name="unlockAddMoves">
                     Unlock Add Moves
                 </label>
-                <button id="exportPgn">Export PGN</button>
             </div>
             <div id="moveWarning" role="alert" aria-live="polite"></div>
             <div id="branchIndicator"></div>
@@ -39,8 +40,6 @@
             <div id="pgnDisplay"></div>
         </div>        
     </div>
-    <input type="text" id="moveInput" placeholder="Enter move" value="h3" />
-    <button id="move">move</button>
     <div id="keyboardHelp">
         <strong>Keyboard:</strong> 
         <span>Left/Right = prev/next</span> | 
@@ -50,6 +49,24 @@
     <div id="promotionOverlay" aria-hidden="true">
         <div id="promotionDialog" role="dialog" aria-modal="true">
             <div id="promotionChoices"></div>
+        </div>
+    </div>
+    <div id="pgnImportOverlay" aria-hidden="true">
+        <div class="importDialog" role="dialog" aria-modal="true">
+            <textarea id="pgnImportText">1. e4 c6 2. d4 d5 3. e5 Bf5 4. Bd3 (4. Nf3 e6 5. Nc3 h6 6. Bd3 Bxd3 7. cxd3 Nd7 8. Bf4 c5 9. Qa4 c4 10. dxc4 dxc4 11. O-O f6) 4... e6 5. Bxf5 exf5 6. Nf3 c5 7. c3 cxd4 8. cxd4 Nc6 9. O-O Be7 10. Nc3 Nh6 11. h3 f6 12. Be3 fxe5 13. dxe5 Nf7 14. Nxd5 Nfxe5 15. Nxe5 Nxe5 16. Qa4+ Nd7 17. Rfe1 O-O 18. Nxe7+ Qxe7 19. Qc4+ Kh8 20. Bc5 Nxc5 21. Rxe7 Ne4 22. Rxb7 Nd2 23. Qf4 Ne4 24. f3 Nc5 25. Rb5 Nd3</textarea>
+            <div class="importActions">
+                <button id="loadPgnFromOverlay">Load PGN</button>
+                <button id="closePgnOverlay">Close</button>
+            </div>
+        </div>
+    </div>
+    <div id="fenImportOverlay" aria-hidden="true">
+        <div class="importDialog" role="dialog" aria-modal="true">
+            <input type="text" id="fenImportInput" placeholder="Enter FEN" />
+            <div class="importActions">
+                <button id="loadFenFromOverlay">Load FEN</button>
+                <button id="closeFenOverlay">Close</button>
+            </div>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>

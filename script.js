@@ -19,21 +19,46 @@ var renderer = null;
 var nodeMap = new Map();
 var wrongMoveSquares = null;
 var promotionResolver = null;
+var feedbackTimer = null;
 
 function clearMoveFeedback() {
     wrongMoveSquares = null;
+    if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+        feedbackTimer = null;
+    }
     const warning = document.getElementById('moveWarning');
     if (!warning) return;
     warning.textContent = '';
     warning.classList.remove('active');
+    warning.classList.remove('info');
 }
 
-function showMoveWarning(message, wrongMove = null) {
+function showMoveFeedback(message, mode = 'warning', wrongMove = null, autoHideMs = 0) {
     wrongMoveSquares = wrongMove ? { from: wrongMove.from, to: wrongMove.to } : null;
+    if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+        feedbackTimer = null;
+    }
     const warning = document.getElementById('moveWarning');
     if (!warning) return;
     warning.textContent = message;
     warning.classList.add('active');
+    warning.classList.toggle('info', mode === 'info');
+    if (autoHideMs > 0) {
+        feedbackTimer = setTimeout(function() {
+            clearMoveFeedback();
+            setupBoard(globalBoard);
+        }, autoHideMs);
+    }
+}
+
+function showMoveWarning(message, wrongMove = null) {
+    showMoveFeedback(message, 'warning', wrongMove, 0);
+}
+
+function showInfoMessage(message) {
+    showMoveFeedback(message, 'info', null, 2200);
 }
 
 function getPromotionPieceSymbol(color, promotion) {
@@ -204,10 +229,203 @@ function buildExportPgn() {
     return exportFromNode(moveNavigator.root);
 }
 
-function exportPgnToTextarea() {
-    const textarea = document.getElementById('pgnText');
-    if (!textarea) return;
-    textarea.value = buildExportPgn();
+function copyTextFallback(text) {
+    const temp = document.createElement('textarea');
+    temp.value = text;
+    temp.setAttribute('readonly', '');
+    temp.style.position = 'fixed';
+    temp.style.opacity = '0';
+    temp.style.pointerEvents = 'none';
+    document.body.appendChild(temp);
+    temp.select();
+    let copied = false;
+    try {
+        copied = document.execCommand('copy');
+    } catch (err) {
+        copied = false;
+    }
+    document.body.removeChild(temp);
+    return copied;
+}
+
+async function copyTextToClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch (err) {
+        // Fall through to legacy copy path.
+    }
+    return copyTextFallback(text);
+}
+
+function isPgnImportOverlayOpen() {
+    const overlay = document.getElementById('pgnImportOverlay');
+    return !!(overlay && overlay.classList.contains('active'));
+}
+
+function isFenImportOverlayOpen() {
+    const overlay = document.getElementById('fenImportOverlay');
+    return !!(overlay && overlay.classList.contains('active'));
+}
+
+function closePgnImportOverlay() {
+    const overlay = document.getElementById('pgnImportOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('import-open');
+}
+
+function openPgnImportOverlay() {
+    closeFenImportOverlay();
+    const overlay = document.getElementById('pgnImportOverlay');
+    if (!overlay) return;
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('import-open');
+}
+
+function closeFenImportOverlay() {
+    const overlay = document.getElementById('fenImportOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('import-open');
+}
+
+function openFenImportOverlay() {
+    closePgnImportOverlay();
+    const overlay = document.getElementById('fenImportOverlay');
+    const fenInput = document.getElementById('fenImportInput');
+    if (!overlay) return;
+    if (fenInput) {
+        fenInput.value = globalBoard;
+    }
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('import-open');
+}
+
+function loadPgnFromText(rawPgn) {
+    if (!moveNavigator) return false;
+    const pgn = (rawPgn || '').trim();
+    if (!pgn) {
+        showMoveWarning('PGN input is empty.');
+        return false;
+    }
+
+    moveNavigator.loadPgn(pgn, startingFen);
+    renderer = new PgnRenderer(moveNavigator, onPgnMoveClick);
+    nodeMap = renderer.buildNodeMap();
+    syncUiToNavigator();
+    return true;
+}
+
+function loadPgnFromImportOverlay() {
+    const pgnInput = document.getElementById('pgnImportText');
+    if (!pgnInput) return;
+    if (loadPgnFromText(pgnInput.value)) {
+        pgnInput.value = pgnInput.value.trim();
+        closePgnImportOverlay();
+    }
+}
+
+function loadFenFromImportOverlay() {
+    const fenInput = document.getElementById('fenImportInput');
+    if (!fenInput) return;
+    const fen = fenInput.value.trim();
+    if (!fen) {
+        showMoveWarning('FEN input is empty.');
+        return;
+    }
+
+    const game = new Chess();
+    const isValidFen = game.load(fen);
+    if (!isValidFen) {
+        showMoveWarning('FEN is invalid.');
+        return;
+    }
+
+    clearMoveFeedback();
+    clickedSquare = null;
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+    closeFenImportOverlay();
+}
+
+async function exportPgnFromTree() {
+    const pgn = buildExportPgn();
+    if (!pgn) {
+        showInfoMessage('No PGN moves to export.');
+        return;
+    }
+
+    const copied = await copyTextToClipboard(pgn);
+    if (copied) {
+        showInfoMessage('PGN copied.');
+        return;
+    }
+
+    const pgnInput = document.getElementById('pgnImportText');
+    if (pgnInput) {
+        pgnInput.value = pgn;
+    }
+    openPgnImportOverlay();
+    showInfoMessage('Clipboard unavailable. PGN opened for manual copy.');
+}
+
+async function exportCurrentFen() {
+    const fen = globalBoard;
+    if (!fen) {
+        showInfoMessage('No FEN to export.');
+        return;
+    }
+
+    const copied = await copyTextToClipboard(fen);
+    if (copied) {
+        showInfoMessage('FEN copied.');
+        return;
+    }
+
+    const fenInput = document.getElementById('fenImportInput');
+    if (fenInput) {
+        fenInput.value = fen;
+    }
+    openFenImportOverlay();
+    showInfoMessage('Clipboard unavailable. FEN opened for manual copy.');
+}
+
+function initializeImportOverlayEvents() {
+    const pgnOverlay = document.getElementById('pgnImportOverlay');
+    const pgnDialog = pgnOverlay ? pgnOverlay.querySelector('.importDialog') : null;
+    const fenOverlay = document.getElementById('fenImportOverlay');
+    const fenDialog = fenOverlay ? fenOverlay.querySelector('.importDialog') : null;
+
+    if (pgnDialog) {
+        pgnDialog.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    if (fenDialog) {
+        fenDialog.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    if (pgnOverlay) {
+        pgnOverlay.addEventListener('click', function() {
+            closePgnImportOverlay();
+        });
+    }
+
+    if (fenOverlay) {
+        fenOverlay.addEventListener('click', function() {
+            closeFenImportOverlay();
+        });
+    }
 }
 
 function syncUiToNavigator(clearFeedback = true) {
@@ -226,26 +444,23 @@ function syncUiToNavigator(clearFeedback = true) {
 
 document.addEventListener('DOMContentLoaded', function() {
     setupBoard(globalBoard);
-    document.getElementById('fenInput').value = globalBoard;
-    document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
     updateUnlockControlState();
     initializePromotionOverlayEvents();
+    initializeImportOverlayEvents();
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
-    // Auto-load the PGN in the textarea on page load using the same load flow.
-    loadPgnFromTextarea();
+    // Auto-load PGN from import panel content.
+    const pgnImportText = document.getElementById('pgnImportText');
+    loadPgnFromText(pgnImportText ? pgnImportText.value : '');
 });
 
-document.getElementById('setBoard').addEventListener('click', function() {
-    let fen = document.getElementById('fenInput').value;
-    clearMoveFeedback();
-    setupBoard(fen);
-    globalBoard = fen;
+document.getElementById('importPgnBtn').addEventListener('click', function() {
+    openPgnImportOverlay();
 });
 
-document.getElementById('loadPgn').addEventListener('click', function() {
-    loadPgnFromTextarea();
+document.getElementById('importFenBtn').addEventListener('click', function() {
+    openFenImportOverlay();
 });
 
 document.getElementById('unlockAddMoves').addEventListener('change', function() {
@@ -253,23 +468,28 @@ document.getElementById('unlockAddMoves').addEventListener('change', function() 
 });
 
 document.getElementById('exportPgn').addEventListener('click', function() {
-    exportPgnToTextarea();
+    exportPgnFromTree();
 });
 
-function loadPgnFromTextarea() {
-    document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
-    let pgn = document.getElementById('pgnText').value;
-    
-    // Parse PGN and build move tree
-    moveNavigator.loadPgn(pgn, startingFen);
-    
-    // Setup renderer with click handler
-    renderer = new PgnRenderer(moveNavigator, onPgnMoveClick);
-    nodeMap = renderer.buildNodeMap();
-    
-    // Update board and rendered PGN
-    syncUiToNavigator();
-}
+document.getElementById('exportFen').addEventListener('click', function() {
+    exportCurrentFen();
+});
+
+document.getElementById('loadPgnFromOverlay').addEventListener('click', function() {
+    loadPgnFromImportOverlay();
+});
+
+document.getElementById('closePgnOverlay').addEventListener('click', function() {
+    closePgnImportOverlay();
+});
+
+document.getElementById('loadFenFromOverlay').addEventListener('click', function() {
+    loadFenFromImportOverlay();
+});
+
+document.getElementById('closeFenOverlay').addEventListener('click', function() {
+    closeFenImportOverlay();
+});
 
 function onPgnMoveClick(node) {
     moveNavigator.goToNode(node);
@@ -297,7 +517,14 @@ function renderPgnDisplay() {
         // Scroll current move into view
         const currentMove = pgnDisplay.querySelector('.pgn-move-current');
         if (currentMove) {
-            currentMove.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const displayRect = pgnDisplay.getBoundingClientRect();
+            const moveRect = currentMove.getBoundingClientRect();
+            const margin = 16;
+            if (moveRect.top < displayRect.top + margin) {
+                pgnDisplay.scrollTop += moveRect.top - displayRect.top - margin;
+            } else if (moveRect.bottom > displayRect.bottom - margin) {
+                pgnDisplay.scrollTop += moveRect.bottom - displayRect.bottom + margin;
+            }
         }
     }
 }
@@ -368,6 +595,15 @@ document.addEventListener('keydown', function(e) {
         return;
     }
 
+    if (isPgnImportOverlayOpen() || isFenImportOverlayOpen()) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closePgnImportOverlay();
+            closeFenImportOverlay();
+        }
+        return;
+    }
+
     if (!moveNavigator) return;
     
     // Ignore if typing in input fields
@@ -422,15 +658,6 @@ function switchVariation(direction) {
         syncUiToNavigator();
     }
 }
-
-document.getElementById('move').addEventListener('click', function() {
-    let move = document.getElementById('moveInput').value;
-    var game = new Chess();
-    game.load(globalBoard);
-    game.move(move);
-    globalBoard = game.fen();
-    setupBoard(globalBoard);
-});
 
 document.getElementById('flipToggle').addEventListener('change', function() {
     const chessboard = document.getElementById('chessboard');

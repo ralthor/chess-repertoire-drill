@@ -40,7 +40,11 @@ button:active {
     background-color: #305979;
 }
 
-#fenInput {
+#fenImportInput {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
     color: #000;
 }
 
@@ -137,45 +141,29 @@ button:active {
     border-radius: 5px;
 }
 
-#pgnText {
-    width: 100%;
-    min-height: 100px;
-    flex-grow: 1;
-    background-color: #3f3a58;
-    border: none;
-    box-sizing: border-box;
-    padding: 10px;
-    resize: none;
-    margin: 0;
-    overflow-y: auto;
-    color: #e1c5c5;
-    text-align: left;
-    font-size: 14px;
-    border-radius: 5px;
-}
-
-#pgnControls {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
-}
-
-#pgnControls button {
-    padding: 10px 15px;
-    cursor: pointer;
-    flex: 1;
-    min-width: 80px;
-}
-
+#importControls,
+#pgnControls,
+#exportControls,
 #editControls {
     display: flex;
     justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     margin-top: 8px;
+}
+
+#importControls {
+    margin-top: 0;
+}
+
+#importControls button,
+#pgnControls button,
+#exportControls button {
+    padding: 10px 15px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 92px;
 }
 
 #unlockControl {
@@ -203,9 +191,9 @@ button:active {
     color: #e8ffe8;
 }
 
-#exportPgn {
+#exportPgn,
+#exportFen {
     min-width: 110px;
-    flex: 0 0 auto;
 }
 
 #moveWarning {
@@ -222,6 +210,12 @@ button:active {
 
 #moveWarning.active {
     display: block;
+}
+
+#moveWarning.info {
+    background-color: #224764;
+    border-color: #3f769f;
+    color: #d4eeff;
 }
 
 /* Branch indicator */
@@ -357,12 +351,11 @@ button:active {
     margin: 0 5px;
 }
 
-/* Move input section */
-#moveInput {
-    width: 150px;
+body.promotion-open {
+    overflow: hidden;
 }
 
-body.promotion-open {
+body.import-open {
     overflow: hidden;
 }
 
@@ -431,6 +424,58 @@ body.promotion-open {
     height: 100%;
 }
 
+#pgnImportOverlay,
+#fenImportOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(8, 12, 18, 0.8);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+#pgnImportOverlay.active,
+#fenImportOverlay.active {
+    display: flex;
+}
+
+.importDialog {
+    width: min(560px, 100%);
+    background-color: #1f2b37;
+    border: 1px solid #4a6076;
+    border-radius: 10px;
+    padding: 12px;
+    box-sizing: border-box;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+}
+
+#pgnImportText {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    border: none;
+    border-radius: 7px;
+    background-color: #334253;
+    color: #ecf5ff;
+    padding: 10px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.importActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.importActions button {
+    flex: 1;
+}
+
 /* ==================== */
 /* MOBILE RESPONSIVE    */
 /* ==================== */
@@ -482,23 +527,30 @@ body.promotion-open {
         margin-top: 10px;
     }
 
-    #pgnText {
-        min-height: 80px;
-        font-size: 13px;
-    }
-
     #pgnControls {
         flex-wrap: nowrap;
     }
 
+    #importControls,
+    #exportControls {
+        flex-wrap: nowrap;
+    }
+
+    #importControls button,
     #pgnControls button {
         padding: 12px 8px;
         font-size: 13px;
         min-width: 60px;
     }
 
+    #exportControls button {
+        padding: 12px 8px;
+        font-size: 13px;
+        min-width: 70px;
+    }
+
     #editControls {
-        justify-content: space-between;
+        justify-content: center;
     }
 
     #unlockControl {
@@ -506,24 +558,10 @@ body.promotion-open {
         font-size: 12px;
     }
 
-    #exportPgn {
-        padding: 12px 10px;
-        font-size: 13px;
-    }
-
     input {
         width: calc(100vw - 40px);
         max-width: 300px;
         box-sizing: border-box;
-    }
-
-    #fenInput {
-        font-size: 12px;
-    }
-
-    #moveInput {
-        width: calc(100vw - 40px);
-        max-width: 200px;
     }
 
     button {
@@ -564,6 +602,16 @@ body.promotion-open {
 
     .promotion-choice {
         min-height: 88px;
+    }
+
+    .importDialog {
+        width: calc(100vw - 20px);
+        max-width: 400px;
+    }
+
+    #pgnImportText {
+        min-height: 140px;
+        font-size: 13px;
     }
 }
 
