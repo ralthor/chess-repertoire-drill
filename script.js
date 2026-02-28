@@ -18,6 +18,7 @@ var moveNavigator = null;
 var renderer = null;
 var nodeMap = new Map();
 var wrongMoveSquares = null;
+var promotionResolver = null;
 
 function clearMoveFeedback() {
     wrongMoveSquares = null;
@@ -35,37 +36,100 @@ function showMoveWarning(message, wrongMove = null) {
     warning.classList.add('active');
 }
 
-function normalizePromotionInput(input) {
-    if (!input) return null;
-    const value = input.trim().toLowerCase();
-    const map = {
-        q: 'q',
-        queen: 'q',
-        r: 'r',
-        rook: 'r',
-        b: 'b',
-        bishop: 'b',
-        n: 'n',
-        knight: 'n'
-    };
-    return map[value] || null;
+function getPromotionPieceSymbol(color, promotion) {
+    return color === 'w' ? promotion.toUpperCase() : promotion;
 }
 
-function promptPromotionPiece(color) {
+function closePromotionOverlay(selection = null) {
+    const overlay = document.getElementById('promotionOverlay');
+    const choices = document.getElementById('promotionChoices');
+    if (overlay) {
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('promotion-open');
+    if (choices) {
+        choices.innerHTML = '';
+    }
+
+    if (promotionResolver) {
+        const resolve = promotionResolver;
+        promotionResolver = null;
+        resolve(selection);
+    }
+}
+
+function openPromotionOverlay(color) {
+    const overlay = document.getElementById('promotionOverlay');
+    const title = document.getElementById('promotionTitle');
+    const choices = document.getElementById('promotionChoices');
+    if (!overlay || !title || !choices) {
+        return Promise.resolve('q');
+    }
+
+    if (promotionResolver) {
+        closePromotionOverlay(null);
+    }
+
     const colorLabel = color === 'w' ? 'White' : 'Black';
-    while (true) {
-        const rawChoice = window.prompt(
-            `${colorLabel} pawn promotion: choose q (queen), r (rook), b (bishop), or n (knight).`,
-            'q'
-        );
-        if (rawChoice === null) {
-            return null;
-        }
-        const promotion = normalizePromotionInput(rawChoice);
-        if (promotion) {
-            return promotion;
-        }
-        window.alert('Invalid promotion piece. Enter q, r, b, or n.');
+    const options = [
+        { code: 'q', label: 'Queen' },
+        { code: 'r', label: 'Rook' },
+        { code: 'b', label: 'Bishop' },
+        { code: 'n', label: 'Knight' }
+    ];
+
+    title.textContent = `${colorLabel} Promotion`;
+    choices.innerHTML = '';
+
+    options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'promotion-choice';
+        btn.innerHTML = `
+            <span class="promotion-choice-piece">${getPieceSVG(getPromotionPieceSymbol(color, option.code))}</span>
+            <span class="promotion-choice-label">${option.label}</span>
+        `;
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closePromotionOverlay(option.code);
+        });
+        choices.appendChild(btn);
+    });
+
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('promotion-open');
+
+    return new Promise(resolve => {
+        promotionResolver = resolve;
+    });
+}
+
+function initializePromotionOverlayEvents() {
+    const overlay = document.getElementById('promotionOverlay');
+    const dialog = document.getElementById('promotionDialog');
+    const cancelBtn = document.getElementById('promotionCancel');
+
+    if (dialog) {
+        dialog.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            if (promotionResolver) {
+                closePromotionOverlay(null);
+            }
+        });
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            closePromotionOverlay(null);
+        });
     }
 }
 
@@ -182,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('fenInput').value = globalBoard;
     document.getElementById('pgnText').value = document.getElementById('pgnText').value.trim();
     updateUnlockControlState();
+    initializePromotionOverlayEvents();
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
@@ -312,6 +377,14 @@ document.getElementById('prevMove').addEventListener('click', function() {
 
 // Keyboard navigation
 document.addEventListener('keydown', function(e) {
+    if (promotionResolver) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closePromotionOverlay(null);
+        }
+        return;
+    }
+
     if (!moveNavigator) return;
     
     // Ignore if typing in input fields
@@ -429,7 +502,7 @@ function convertFenRankToUnicode(fenRank) {
     return unicodeRank;
 }
 
-function boardClick(event, target) {
+async function boardClick(event, target) {
     let square = target;
     let cell = cellMap.get(square.id);
     if (!cell) return;
@@ -453,10 +526,10 @@ function boardClick(event, target) {
         to: move.to
     };
     if (isPromotionMove(game, moveToPlay)) {
-        const promotion = promptPromotionPiece(game.turn());
+        clickedSquare = null;
+        setupBoard(globalBoard);
+        const promotion = await openPromotionOverlay(game.turn());
         if (!promotion) {
-            clickedSquare = null;
-            setupBoard(globalBoard);
             return;
         }
         moveToPlay.promotion = promotion;

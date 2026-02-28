@@ -362,6 +362,98 @@ button:active {
     width: 150px;
 }
 
+body.promotion-open {
+    overflow: hidden;
+}
+
+#promotionOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(8, 12, 18, 0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+#promotionOverlay.active {
+    display: flex;
+}
+
+#promotionDialog {
+    width: min(360px, 100%);
+    background-color: #1f2b37;
+    border: 1px solid #4a6076;
+    border-radius: 10px;
+    padding: 12px;
+    box-sizing: border-box;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+}
+
+#promotionTitle {
+    text-align: center;
+    font-weight: bold;
+    color: #dbe7f4;
+    margin-bottom: 10px;
+}
+
+#promotionChoices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.promotion-choice {
+    margin: 0;
+    min-height: 96px;
+    border: 1px solid #4d6076;
+    border-radius: 8px;
+    background-color: #2c3b4b;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px;
+}
+
+.promotion-choice:hover,
+.promotion-choice:active {
+    background-color: #395067;
+}
+
+.promotion-choice-piece {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.promotion-choice-piece svg {
+    width: 100%;
+    height: 100%;
+}
+
+.promotion-choice-label {
+    font-size: 12px;
+    color: #dbe7f4;
+}
+
+#promotionCancel {
+    width: 100%;
+    margin: 10px 0 0 0;
+    background-color: #5a3f3f;
+}
+
+#promotionCancel:hover,
+#promotionCancel:active {
+    background-color: #6a4b4b;
+}
+
 /* ==================== */
 /* MOBILE RESPONSIVE    */
 /* ==================== */
@@ -491,6 +583,10 @@ button:active {
 
     .pgn-move {
         padding: 6px 8px;
+    }
+
+    .promotion-choice {
+        min-height: 88px;
     }
 }
 
