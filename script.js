@@ -61,9 +61,8 @@ function closePromotionOverlay(selection = null) {
 
 function openPromotionOverlay(color) {
     const overlay = document.getElementById('promotionOverlay');
-    const title = document.getElementById('promotionTitle');
     const choices = document.getElementById('promotionChoices');
-    if (!overlay || !title || !choices) {
+    if (!overlay || !choices) {
         return Promise.resolve('q');
     }
 
@@ -71,15 +70,7 @@ function openPromotionOverlay(color) {
         closePromotionOverlay(null);
     }
 
-    const colorLabel = color === 'w' ? 'White' : 'Black';
-    const options = [
-        { code: 'q', label: 'Queen' },
-        { code: 'r', label: 'Rook' },
-        { code: 'b', label: 'Bishop' },
-        { code: 'n', label: 'Knight' }
-    ];
-
-    title.textContent = `${colorLabel} Promotion`;
+    const options = ['q', 'r', 'b', 'n'];
     choices.innerHTML = '';
 
     options.forEach(option => {
@@ -87,13 +78,12 @@ function openPromotionOverlay(color) {
         btn.type = 'button';
         btn.className = 'promotion-choice';
         btn.innerHTML = `
-            <span class="promotion-choice-piece">${getPieceSVG(getPromotionPieceSymbol(color, option.code))}</span>
-            <span class="promotion-choice-label">${option.label}</span>
+            <span class="promotion-choice-piece">${getPieceSVG(getPromotionPieceSymbol(color, option))}</span>
         `;
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            closePromotionOverlay(option.code);
+            closePromotionOverlay(option);
         });
         choices.appendChild(btn);
     });
@@ -110,7 +100,6 @@ function openPromotionOverlay(color) {
 function initializePromotionOverlayEvents() {
     const overlay = document.getElementById('promotionOverlay');
     const dialog = document.getElementById('promotionDialog');
-    const cancelBtn = document.getElementById('promotionCancel');
 
     if (dialog) {
         dialog.addEventListener('click', function(e) {
@@ -123,12 +112,6 @@ function initializePromotionOverlayEvents() {
             if (promotionResolver) {
                 closePromotionOverlay(null);
             }
-        });
-    }
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            closePromotionOverlay(null);
         });
     }
 }

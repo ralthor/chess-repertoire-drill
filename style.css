@@ -387,16 +387,9 @@ body.promotion-open {
     background-color: #1f2b37;
     border: 1px solid #4a6076;
     border-radius: 10px;
-    padding: 12px;
+    padding: 10px;
     box-sizing: border-box;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
-}
-
-#promotionTitle {
-    text-align: center;
-    font-weight: bold;
-    color: #dbe7f4;
-    margin-bottom: 10px;
 }
 
 #promotionChoices {
@@ -436,22 +429,6 @@ body.promotion-open {
 .promotion-choice-piece svg {
     width: 100%;
     height: 100%;
-}
-
-.promotion-choice-label {
-    font-size: 12px;
-    color: #dbe7f4;
-}
-
-#promotionCancel {
-    width: 100%;
-    margin: 10px 0 0 0;
-    background-color: #5a3f3f;
-}
-
-#promotionCancel:hover,
-#promotionCancel:active {
-    background-color: #6a4b4b;
 }
 
 /* ==================== */
