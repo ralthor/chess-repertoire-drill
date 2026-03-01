@@ -6,6 +6,7 @@ Mobile-first chess line trainer for studying PGN repertoires with an interactive
 
 - Loads and navigates PGN move trees (including variations).
 - Lets you play moves on the board and validates them against current PGN branches.
+- Supports both move input modes: click-click and drag-drop (mouse/touch).
 - Supports branching practice with an `Unlock Add Moves` mode.
 - Imports both PGN and FEN from overlays.
 - Exports both PGN and FEN (clipboard-first with fallback import panels).
@@ -34,6 +35,7 @@ No build step or server is required for basic local usage.
 - `Import PGN`: Open PGN import panel (`Load PGN` or `Close`).
 - `Import FEN`: Open FEN import panel (`Load FEN` or `Close`).
 - `Previous` / `Next`: Move through the current line.
+- Board move input: click-click or drag-drop a piece to the target square (mouse or touch).
 - Click moves in the PGN panel to jump directly.
 - `Unlock Add Moves`: Allow adding new non-PGN moves into the active tree.
 - `Export PGN`: Copy current PGN tree.
@@ -61,3 +63,5 @@ No build step or server is required for basic local usage.
 - The app is designed so board interaction stays central on small screens.
 - PGN move highlighting scrolls inside the PGN panel only (no forced page scroll jump).
 - Import overlays can be closed without applying changes.
+- Drag-drop and click-click share the same validation flow (promotion, PGN branch matching, warnings, and unlock behavior).
+- Press `Esc` to close overlays and cancel an in-progress drag gesture.

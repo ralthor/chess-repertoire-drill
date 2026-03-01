@@ -20,6 +20,18 @@ var nodeMap = new Map();
 var wrongMoveSquares = null;
 var promotionResolver = null;
 var feedbackTimer = null;
+var dragPointerId = null;
+var dragSourceSquareId = null;
+var dragSourceElement = null;
+var dragPieceCode = null;
+var dragStartClientX = 0;
+var dragStartClientY = 0;
+var dragPreview = null;
+var dragCurrentTargetId = null;
+var isDragActive = false;
+var suppressNextClick = false;
+
+const DRAG_THRESHOLD_PX = 8;
 
 function clearMoveFeedback() {
     wrongMoveSquares = null;
@@ -150,6 +162,260 @@ function isPromotionMove(game, move) {
         return false;
     }
     return (piece.color === 'w' && move.to[1] === '8') || (piece.color === 'b' && move.to[1] === '1');
+}
+
+function canDragFromSquare(squareId) {
+    if (!squareId) return false;
+    const game = new Chess();
+    game.load(globalBoard);
+    const piece = game.get(squareId);
+    return !!(piece && piece.color === game.turn());
+}
+
+function getSquareIdFromDomTarget(target) {
+    let current = target;
+    while (current && current !== document.body) {
+        if (current.parentElement && current.parentElement.id === 'chessboard' && cellMap.has(current.id)) {
+            return current.id;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
+function getSquareIdFromPoint(clientX, clientY) {
+    return getSquareIdFromDomTarget(document.elementFromPoint(clientX, clientY));
+}
+
+function clearDragTargetHighlight() {
+    if (!dragCurrentTargetId) return;
+    const oldTarget = document.getElementById(dragCurrentTargetId);
+    if (oldTarget) {
+        oldTarget.classList.remove('drag-target');
+    }
+    dragCurrentTargetId = null;
+}
+
+function setDragTargetHighlight(squareId) {
+    if (dragCurrentTargetId === squareId) return;
+    clearDragTargetHighlight();
+    if (!squareId || squareId === dragSourceSquareId) return;
+    const targetSquare = document.getElementById(squareId);
+    if (!targetSquare) return;
+    targetSquare.classList.add('drag-target');
+    dragCurrentTargetId = squareId;
+}
+
+function createDragPreview(pieceCode) {
+    if (!pieceCode) return null;
+    const preview = document.createElement('div');
+    preview.className = 'dragging-piece';
+    preview.innerHTML = getPieceSVG(pieceCode);
+    document.body.appendChild(preview);
+    return preview;
+}
+
+function moveDragPreview(clientX, clientY) {
+    if (!dragPreview) return;
+    dragPreview.style.left = `${clientX}px`;
+    dragPreview.style.top = `${clientY}px`;
+}
+
+function removeDragPreview() {
+    if (!dragPreview) return;
+    dragPreview.remove();
+    dragPreview = null;
+}
+
+function resetDragState(consumeNextClick) {
+    if (dragSourceElement && dragPointerId !== null && dragSourceElement.hasPointerCapture) {
+        try {
+            if (dragSourceElement.hasPointerCapture(dragPointerId)) {
+                dragSourceElement.releasePointerCapture(dragPointerId);
+            }
+        } catch (err) {
+            // Ignore capture-release errors during teardown.
+        }
+    }
+
+    if (dragSourceSquareId) {
+        const sourceEl = document.getElementById(dragSourceSquareId);
+        if (sourceEl) {
+            sourceEl.classList.remove('drag-source');
+        }
+    }
+
+    clearDragTargetHighlight();
+    removeDragPreview();
+
+    dragPointerId = null;
+    dragSourceSquareId = null;
+    dragSourceElement = null;
+    dragPieceCode = null;
+    dragStartClientX = 0;
+    dragStartClientY = 0;
+    isDragActive = false;
+    document.body.classList.remove('dragging-board');
+
+    if (consumeNextClick) {
+        suppressNextClick = true;
+    }
+}
+
+function beginDragCandidate(event, square) {
+    if (!square) return;
+    if (dragPointerId !== null) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    const sourceSquareId = square.id;
+    const sourceCell = cellMap.get(sourceSquareId);
+    if (!sourceCell || sourceCell.piece === '.' || !canDragFromSquare(sourceSquareId)) {
+        return;
+    }
+
+    dragPointerId = event.pointerId;
+    dragSourceSquareId = sourceSquareId;
+    dragSourceElement = square;
+    dragPieceCode = sourceCell.piece;
+    dragStartClientX = event.clientX;
+    dragStartClientY = event.clientY;
+    isDragActive = false;
+
+    if (square.setPointerCapture) {
+        try {
+            square.setPointerCapture(event.pointerId);
+        } catch (err) {
+            // Ignore capture errors if browser denies capture in edge cases.
+        }
+    }
+}
+
+function onGlobalPointerMove(event) {
+    if (dragPointerId === null || event.pointerId !== dragPointerId) return;
+
+    const dx = event.clientX - dragStartClientX;
+    const dy = event.clientY - dragStartClientY;
+    const distance = Math.hypot(dx, dy);
+
+    if (!isDragActive) {
+        if (distance < DRAG_THRESHOLD_PX) {
+            return;
+        }
+        isDragActive = true;
+        clickedSquare = null;
+        clearMoveFeedback();
+        document.body.classList.add('dragging-board');
+        const sourceEl = dragSourceSquareId ? document.getElementById(dragSourceSquareId) : null;
+        if (sourceEl) {
+            sourceEl.classList.add('drag-source');
+        }
+        dragPreview = createDragPreview(dragPieceCode);
+    }
+
+    if (event.cancelable) {
+        event.preventDefault();
+    }
+
+    moveDragPreview(event.clientX, event.clientY);
+    setDragTargetHighlight(getSquareIdFromPoint(event.clientX, event.clientY));
+}
+
+async function onGlobalPointerUp(event) {
+    if (dragPointerId === null || event.pointerId !== dragPointerId) return;
+
+    const sourceSquareId = dragSourceSquareId;
+    const wasDrag = isDragActive;
+    const destinationSquareId = wasDrag ? getSquareIdFromPoint(event.clientX, event.clientY) : null;
+
+    resetDragState(wasDrag);
+
+    if (!wasDrag) {
+        return;
+    }
+
+    if (!sourceSquareId || !destinationSquareId || sourceSquareId === destinationSquareId) {
+        clickedSquare = null;
+        setupBoard(globalBoard);
+        return;
+    }
+
+    await attemptMove(sourceSquareId, destinationSquareId);
+}
+
+function onGlobalPointerCancel(event) {
+    if (dragPointerId === null || event.pointerId !== dragPointerId) return;
+    const hadActiveDrag = isDragActive;
+    resetDragState(hadActiveDrag);
+    if (hadActiveDrag) {
+        clickedSquare = null;
+        setupBoard(globalBoard);
+    }
+}
+
+async function attemptMove(fromSquareId, toSquareId) {
+    const move = {
+        from: fromSquareId,
+        to: toSquareId
+    };
+
+    const game = new Chess();
+    game.load(globalBoard);
+
+    let moveToPlay = {
+        from: move.from,
+        to: move.to
+    };
+
+    if (isPromotionMove(game, moveToPlay)) {
+        clickedSquare = null;
+        setupBoard(globalBoard);
+        const promotion = await openPromotionOverlay(game.turn());
+        if (!promotion) {
+            return false;
+        }
+        moveToPlay.promotion = promotion;
+    }
+
+    const moveResult = game.move(moveToPlay);
+    if (!moveResult) {
+        clickedSquare = null;
+        setupBoard(globalBoard);
+        return false;
+    }
+
+    clickedSquare = null;
+
+    if (moveNavigator && moveNavigator.currentNode) {
+        const continuations = moveNavigator.currentNode.children || [];
+        const nextFen = game.fen();
+        const matchingNode = continuations.find(child => child.fen === nextFen);
+        if (matchingNode) {
+            moveNavigator.goToNode(matchingNode);
+            syncUiToNavigator();
+            return true;
+        }
+
+        if (isMoveAdditionUnlocked()) {
+            addMoveToTree(moveResult.san, nextFen);
+            syncUiToNavigator();
+            return true;
+        }
+
+        if (continuations.length === 0) {
+            showMoveWarning('No more PGN moves are available from this position.', move);
+            syncUiToNavigator(false);
+            return false;
+        }
+
+        showMoveWarning(`Move ${moveResult.san} is not in this PGN branch.`, move);
+        syncUiToNavigator(false);
+        return false;
+    }
+
+    clearMoveFeedback();
+    globalBoard = game.fen();
+    setupBoard(globalBoard);
+    return true;
 }
 
 function isMoveAdditionUnlocked() {
@@ -462,6 +728,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUnlockControlState();
     initializePromotionOverlayEvents();
     initializeImportOverlayEvents();
+    document.addEventListener('pointermove', onGlobalPointerMove, { passive: false });
+    document.addEventListener('pointerup', onGlobalPointerUp);
+    document.addEventListener('pointercancel', onGlobalPointerCancel);
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
@@ -614,6 +883,17 @@ document.addEventListener('keydown', function(e) {
         return;
     }
 
+    if (dragPointerId !== null && e.key === 'Escape') {
+        e.preventDefault();
+        const hadActiveDrag = isDragActive;
+        resetDragState(true);
+        if (hadActiveDrag) {
+            clickedSquare = null;
+            setupBoard(globalBoard);
+        }
+        return;
+    }
+
     if (isPgnImportOverlayOpen() || isFenImportOverlayOpen()) {
         if (e.key === 'Escape') {
             e.preventDefault();
@@ -679,6 +959,7 @@ function switchVariation(direction) {
 }
 
 document.getElementById('flipToggle').addEventListener('change', function() {
+    resetDragState(false);
     if (this.checked) {
         whiteView = false;
     } else {
@@ -689,6 +970,7 @@ document.getElementById('flipToggle').addEventListener('change', function() {
 
 document.getElementById('chessboard').addEventListener('contextmenu', function(e) {
     e.preventDefault();
+    resetDragState(false);
     clickedSquare = null;
     setupBoard(globalBoard);
 });
@@ -731,6 +1013,11 @@ function convertFenRankToUnicode(fenRank) {
 }
 
 async function boardClick(event, target) {
+    if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+    }
+
     let square = target;
     let cell = cellMap.get(square.id);
     if (!cell) return;
@@ -746,61 +1033,7 @@ async function boardClick(event, target) {
         from: clickedSquare.rank + clickedSquare.row,
         to: cell.rank + cell.row
     };
-
-    var game = new Chess();
-    game.load(globalBoard);
-    let moveToPlay = {
-        from: move.from,
-        to: move.to
-    };
-    if (isPromotionMove(game, moveToPlay)) {
-        clickedSquare = null;
-        setupBoard(globalBoard);
-        const promotion = await openPromotionOverlay(game.turn());
-        if (!promotion) {
-            return;
-        }
-        moveToPlay.promotion = promotion;
-    }
-    let moveResult = game.move(moveToPlay);
-    if (!moveResult) {
-        clickedSquare = null;
-        setupBoard(globalBoard);
-        return;
-    }
-
-    clickedSquare = null;
-
-    if (moveNavigator && moveNavigator.currentNode) {
-        const continuations = moveNavigator.currentNode.children || [];
-        const nextFen = game.fen();
-        const matchingNode = continuations.find(child => child.fen === nextFen);
-        if (matchingNode) {
-            moveNavigator.goToNode(matchingNode);
-            syncUiToNavigator();
-            return;
-        }
-
-        if (isMoveAdditionUnlocked()) {
-            addMoveToTree(moveResult.san, nextFen);
-            syncUiToNavigator();
-            return;
-        }
-
-        if (continuations.length === 0) {
-            showMoveWarning('No more PGN moves are available from this position.', move);
-            syncUiToNavigator(false);
-            return;
-        }
-
-        showMoveWarning(`Move ${moveResult.san} is not in this PGN branch.`, move);
-        syncUiToNavigator(false);
-        return;
-    }
-
-    clearMoveFeedback();
-    globalBoard = game.fen();
-    setupBoard(globalBoard);
+    await attemptMove(move.from, move.to);
 }
 
 function setupBoard(fen) {
@@ -842,6 +1075,9 @@ function setupBoard(fen) {
                 square.classList.add('wrong-move');
             }
             cellMap.set(id, cellObject);
+            square.addEventListener('pointerdown', function(event) {
+                beginDragCandidate(event, square);
+            });
             square.addEventListener('click', function(event) {
                 boardClick(event, square);
             });
