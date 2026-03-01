@@ -8,8 +8,10 @@ Mobile-first chess line trainer for studying PGN repertoires with an interactive
 - Lets you play moves on the board and validates them against current PGN branches.
 - Supports branching practice with an `Unlock Add Moves` mode.
 - Imports both PGN and FEN from overlays.
-- Exports both PGN and FEN.
+- Exports both PGN and FEN (clipboard-first with fallback import panels).
+- Opens the current position in Lichess with one-click analysis.
 - Handles pawn promotion with an in-page piece picker overlay.
+- Keeps the move tree visually above controls for a cleaner mobile-first flow.
 
 ## Demo
 
@@ -34,9 +36,10 @@ No build step or server is required for basic local usage.
 - `Previous` / `Next`: Move through the current line.
 - Click moves in the PGN panel to jump directly.
 - `Unlock Add Moves`: Allow adding new non-PGN moves into the active tree.
-- `Export PGN`: Export current PGN tree.
-- `Export FEN`: Export current board FEN.
-- `Flip Board`: Switch board orientation.
+- `Export PGN`: Copy current PGN tree.
+- `Export FEN`: Copy current board FEN.
+- `Analysis`: Open Lichess analysis in a new tab for the current FEN.
+- `Flip Board`: Switch board orientation (moved to lower controls for better mobile spacing).
 
 ## Keyboard Shortcuts
 
@@ -57,3 +60,4 @@ No build step or server is required for basic local usage.
 
 - The app is designed so board interaction stays central on small screens.
 - PGN move highlighting scrolls inside the PGN panel only (no forced page scroll jump).
+- Import overlays can be closed without applying changes.

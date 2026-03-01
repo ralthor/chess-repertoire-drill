@@ -397,6 +397,21 @@ async function exportCurrentFen() {
     showInfoMessage('Clipboard unavailable. FEN opened for manual copy.');
 }
 
+function openLichessAnalysis() {
+    const fen = (globalBoard || '').trim();
+    if (!fen) {
+        showInfoMessage('No FEN available for analysis.');
+        return;
+    }
+
+    const fenPath = fen.replace(/ /g, '_');
+    const analysisUrl = `https://lichess.org/analysis/${fenPath}`;
+    const win = window.open(analysisUrl, '_blank', 'noopener,noreferrer');
+    if (!win) {
+        showMoveWarning('Could not open analysis tab. Check popup blocker settings.');
+    }
+}
+
 function initializeImportOverlayEvents() {
     const pgnOverlay = document.getElementById('pgnImportOverlay');
     const pgnDialog = pgnOverlay ? pgnOverlay.querySelector('.importDialog') : null;
@@ -473,6 +488,10 @@ document.getElementById('exportPgn').addEventListener('click', function() {
 
 document.getElementById('exportFen').addEventListener('click', function() {
     exportCurrentFen();
+});
+
+document.getElementById('analysisBtn').addEventListener('click', function() {
+    openLichessAnalysis();
 });
 
 document.getElementById('loadPgnFromOverlay').addEventListener('click', function() {
@@ -660,7 +679,6 @@ function switchVariation(direction) {
 }
 
 document.getElementById('flipToggle').addEventListener('change', function() {
-    const chessboard = document.getElementById('chessboard');
     if (this.checked) {
         whiteView = false;
     } else {

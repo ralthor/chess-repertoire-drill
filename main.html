@@ -10,12 +10,12 @@
     <div id="boardContainer">
         <div id="chessboardContainer">
             <div id="chessboard"></div>
-            <div id="boardControls">
-                <label for="flipToggle">Flip Board:</label>
-                <input type="checkbox" id="flipToggle" name="flipToggle">
-            </div>
         </div>
         <div id="moveList">
+            <div id="moveWarning" role="alert" aria-live="polite"></div>
+            <div id="branchIndicator"></div>
+            <div id="variationButtons"></div>
+            <div id="pgnDisplay"></div>
             <div id="importControls">
                 <button id="importPgnBtn">Import PGN</button>
                 <button id="importFenBtn">Import FEN</button>
@@ -27,17 +27,18 @@
             <div id="exportControls">
                 <button id="exportPgn">Export PGN</button>
                 <button id="exportFen">Export FEN</button>
+                <button id="analysisBtn">Analysis</button>
             </div>
             <div id="editControls">
                 <label id="unlockControl" for="unlockAddMoves">
                     <input type="checkbox" id="unlockAddMoves" name="unlockAddMoves">
                     Unlock Add Moves
                 </label>
+                <label id="flipControl" for="flipToggle">
+                    <input type="checkbox" id="flipToggle" name="flipToggle">
+                    Flip Board
+                </label>
             </div>
-            <div id="moveWarning" role="alert" aria-live="polite"></div>
-            <div id="branchIndicator"></div>
-            <div id="variationButtons"></div>
-            <div id="pgnDisplay"></div>
         </div>        
     </div>
     <div id="keyboardHelp">

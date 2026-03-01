@@ -95,24 +95,11 @@ button:active {
     height: 100%;
 }
 
-#boardControls {
-    margin-top: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-#boardControls label {
-    margin-right: 10px;
-    color: #ffffff;
-}
-
 #flipToggle {
-    transform: scale(1.5);
+    transform: scale(1.15);
     cursor: pointer;
     width: auto;
-    margin: 5px;
+    margin: 0;
 }
 
 #boardContainer {
@@ -178,11 +165,23 @@ button:active {
     color: #d9e4f2;
 }
 
-#unlockControl input {
+#flipControl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #2a3441;
+    border: 1px solid #3b4c60;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #d9e4f2;
+}
+
+#unlockControl input,
+#flipControl input {
     width: auto;
     max-width: none;
     margin: 0;
-    transform: scale(1.15);
 }
 
 #unlockControl.unlocked {
@@ -192,7 +191,8 @@ button:active {
 }
 
 #exportPgn,
-#exportFen {
+#exportFen,
+#analysisBtn {
     min-width: 110px;
 }
 
@@ -287,7 +287,7 @@ button:active {
     overflow-y: auto;
     background-color: #2a3441;
     padding: 10px;
-    margin-top: 10px;
+    margin-top: 0;
     border-radius: 5px;
     font-size: 14px;
     line-height: 1.8;
@@ -531,8 +531,7 @@ body.import-open {
         flex-wrap: nowrap;
     }
 
-    #importControls,
-    #exportControls {
+    #importControls {
         flex-wrap: nowrap;
     }
 
@@ -554,6 +553,11 @@ body.import-open {
     }
 
     #unlockControl {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    #flipControl {
         padding: 10px;
         font-size: 12px;
     }
