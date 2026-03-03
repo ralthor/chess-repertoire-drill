@@ -1,0 +1,7 @@
+[Event "Round Trip"]
+[Site "Local"]
+[Result "1-0"]
+
+1. e4 {Main line [%cal Gg1f3,Rd1d7][%csl Ge4,Re5] with text} $1 c5
+2. Nf3 ; Natural move [%cal Bg1f3]
+2... d6 (2... Nc6 {Alt [%csl Bc6,Yd4]} $5 3. d4 cxd4) 3. d4 cxd4 4. Nxd4 1-0

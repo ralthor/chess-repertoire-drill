@@ -30,8 +30,16 @@ var dragPreview = null;
 var dragCurrentTargetId = null;
 var isDragActive = false;
 var suppressNextClick = false;
+var activeCommentText = '';
+var activeBoardAnnotations = { cal: [], csl: [] };
 
 const DRAG_THRESHOLD_PX = 8;
+const ANNOTATION_COLOR_MAP = {
+    G: '#49c866',
+    R: '#ff6b6b',
+    Y: '#e8c547',
+    B: '#5f9bff'
+};
 
 function clearMoveFeedback() {
     wrongMoveSquares = null;
@@ -71,6 +79,219 @@ function showMoveWarning(message, wrongMove = null) {
 
 function showInfoMessage(message) {
     showMoveFeedback(message, 'info', null, 2200);
+}
+
+function isValidSquareId(squareId) {
+    return /^[a-h][1-8]$/.test(squareId || '');
+}
+
+function getCurrentNodeAnnotationPayload(node) {
+    if (!node) {
+        return { text: '', tags: { cal: [], csl: [] } };
+    }
+
+    const comments = []
+        .concat(node.commentsBefore || [])
+        .concat(node.commentsAfter || []);
+
+    const textParts = [];
+    const arrows = [];
+    const squares = [];
+    const seenArrows = new Set();
+    const seenSquares = new Set();
+
+    comments.forEach(comment => {
+        const normalizedText = (comment && comment.text ? comment.text : '').trim();
+        if (normalizedText) {
+            textParts.push(normalizedText);
+        }
+
+        const tagData = comment && comment.tags ? comment.tags : {};
+        (tagData.cal || []).forEach(arrow => {
+            if (!arrow || !ANNOTATION_COLOR_MAP[arrow.color]) return;
+            if (!isValidSquareId(arrow.from) || !isValidSquareId(arrow.to)) return;
+            const key = `${arrow.color}:${arrow.from}:${arrow.to}`;
+            if (seenArrows.has(key)) return;
+            seenArrows.add(key);
+            arrows.push({
+                color: arrow.color,
+                from: arrow.from,
+                to: arrow.to
+            });
+        });
+
+        (tagData.csl || []).forEach(square => {
+            if (!square || !ANNOTATION_COLOR_MAP[square.color]) return;
+            if (!isValidSquareId(square.square)) return;
+            const key = `${square.color}:${square.square}`;
+            if (seenSquares.has(key)) return;
+            seenSquares.add(key);
+            squares.push({
+                color: square.color,
+                square: square.square
+            });
+        });
+    });
+
+    return {
+        text: textParts.join('\n\n'),
+        tags: {
+            cal: arrows,
+            csl: squares
+        }
+    };
+}
+
+function updateCurrentCommentPanel(commentText) {
+    const panel = document.getElementById('currentCommentPanel');
+    const textEl = document.getElementById('currentCommentText');
+    if (!panel || !textEl) return;
+
+    const text = (commentText || '').trim();
+    if (!text) {
+        panel.classList.add('empty');
+        textEl.textContent = 'No comment for current move.';
+        return;
+    }
+
+    panel.classList.remove('empty');
+    textEl.textContent = text;
+}
+
+function setActiveAnnotationsFromCurrentNode() {
+    const payload = getCurrentNodeAnnotationPayload(moveNavigator ? moveNavigator.currentNode : null);
+    activeCommentText = payload.text;
+    activeBoardAnnotations = payload.tags;
+    updateCurrentCommentPanel(activeCommentText);
+}
+
+function createSvgElement(tagName) {
+    return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+}
+
+function getSquareCenterInBoard(squareId, boardRect) {
+    if (!boardRect || !isValidSquareId(squareId)) {
+        return null;
+    }
+
+    const file = squareId.charCodeAt(0) - 97; // a -> 0
+    const rank = parseInt(squareId[1], 10);   // 1..8
+    const squareSize = boardRect.width / 8;
+
+    if (squareSize <= 0) {
+        return null;
+    }
+
+    const xIndex = whiteView ? file : 7 - file;
+    const yIndex = whiteView ? 8 - rank : rank - 1;
+
+    return {
+        x: (xIndex + 0.5) * squareSize,
+        y: (yIndex + 0.5) * squareSize,
+        squareSize
+    };
+}
+
+function renderBoardAnnotations() {
+    const overlay = document.getElementById('annotationOverlay');
+    const board = document.getElementById('chessboard');
+    const boardContainer = document.getElementById('chessboardContainer');
+    if (!overlay || !board || !boardContainer) return;
+
+    const boardRect = board.getBoundingClientRect();
+    const width = boardRect.width;
+    const height = boardRect.height;
+
+    overlay.innerHTML = '';
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    boardContainer.style.width = `${width}px`;
+    boardContainer.style.height = `${height}px`;
+    overlay.style.width = `${width}px`;
+    overlay.style.height = `${height}px`;
+
+    overlay.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    overlay.setAttribute('width', width);
+    overlay.setAttribute('height', height);
+
+    const highlights = (activeBoardAnnotations && activeBoardAnnotations.csl) ? activeBoardAnnotations.csl : [];
+    highlights.forEach(mark => {
+        const color = ANNOTATION_COLOR_MAP[mark.color];
+        if (!color) return;
+        const center = getSquareCenterInBoard(mark.square, boardRect);
+        if (!center) return;
+        const size = center.squareSize * 0.8;
+
+        const highlight = createSvgElement('rect');
+        highlight.setAttribute('x', center.x - size / 2);
+        highlight.setAttribute('y', center.y - size / 2);
+        highlight.setAttribute('width', size);
+        highlight.setAttribute('height', size);
+        highlight.setAttribute('rx', center.squareSize * 0.18);
+        highlight.setAttribute('ry', center.squareSize * 0.18);
+        highlight.setAttribute('fill', color);
+        highlight.setAttribute('fill-opacity', '0.34');
+        overlay.appendChild(highlight);
+    });
+
+    const arrows = (activeBoardAnnotations && activeBoardAnnotations.cal) ? activeBoardAnnotations.cal : [];
+    arrows.forEach(arrow => {
+        const color = ANNOTATION_COLOR_MAP[arrow.color];
+        if (!color) return;
+        const start = getSquareCenterInBoard(arrow.from, boardRect);
+        const end = getSquareCenterInBoard(arrow.to, boardRect);
+        if (!start || !end) return;
+
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance < 2) return;
+
+        const averageSquare = (start.squareSize + end.squareSize) / 2;
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+        const startOffset = averageSquare * 0.16;
+        const headLength = Math.max(12, averageSquare * 0.52);
+        const headWidth = Math.max(11, averageSquare * 0.42);
+        const lineStartX = start.x + unitX * startOffset;
+        const lineStartY = start.y + unitY * startOffset;
+        const lineEndX = end.x - unitX * headLength;
+        const lineEndY = end.y - unitY * headLength;
+
+        const shaft = createSvgElement('line');
+        shaft.setAttribute('x1', lineStartX);
+        shaft.setAttribute('y1', lineStartY);
+        shaft.setAttribute('x2', lineEndX);
+        shaft.setAttribute('y2', lineEndY);
+        shaft.setAttribute('stroke', color);
+        shaft.setAttribute('stroke-opacity', '0.46');
+        shaft.setAttribute('stroke-width', Math.max(6, averageSquare * 0.23));
+        shaft.setAttribute('stroke-linecap', 'round');
+        overlay.appendChild(shaft);
+
+        const perpX = -unitY;
+        const perpY = unitX;
+        const baseLeftX = lineEndX + perpX * (headWidth / 2);
+        const baseLeftY = lineEndY + perpY * (headWidth / 2);
+        const baseRightX = lineEndX - perpX * (headWidth / 2);
+        const baseRightY = lineEndY - perpY * (headWidth / 2);
+
+        const head = createSvgElement('polygon');
+        head.setAttribute('points', `${end.x},${end.y} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}`);
+        head.setAttribute('fill', color);
+        head.setAttribute('fill-opacity', '0.46');
+        overlay.appendChild(head);
+
+        const startDot = createSvgElement('circle');
+        startDot.setAttribute('cx', lineStartX);
+        startDot.setAttribute('cy', lineStartY);
+        startDot.setAttribute('r', Math.max(2.6, averageSquare * 0.1));
+        startDot.setAttribute('fill', color);
+        startDot.setAttribute('fill-opacity', '0.46');
+        overlay.appendChild(startDot);
+    });
 }
 
 function getPromotionPieceSymbol(color, promotion) {
@@ -442,57 +663,15 @@ function addMoveToTree(moveSan, fen) {
     const newNode = new MoveNode(moveSan, fen);
     parent.addChild(newNode);
     moveNavigator.goToNode(newNode);
+    moveNavigator.markDirty();
     return newNode;
 }
 
-function formatMoveWithNumber(parentFen, sanMove) {
-    const game = new Chess();
-    game.load(parentFen);
-    const moveNumber = parseInt(parentFen.split(' ')[5], 10);
-    const prefix = game.turn() === 'w' ? `${moveNumber}. ` : `${moveNumber}... `;
-    return `${prefix}${sanMove}`;
-}
-
-function exportBranchFromTree(parentNode, childNode) {
-    if (!parentNode || !childNode || !childNode.move) {
-        return '';
-    }
-
-    const parts = [formatMoveWithNumber(parentNode.fen, childNode.move)];
-    const continuationText = exportFromNode(childNode);
-    if (continuationText) {
-        parts.push(continuationText);
-    }
-
-    return parts.join(' ');
-}
-
-function exportFromNode(node) {
-    if (!node || node.children.length === 0) {
-        return '';
-    }
-
-    const mainChild = node.children[0];
-    const parts = [formatMoveWithNumber(node.fen, mainChild.move)];
-    for (let i = 1; i < node.children.length; i++) {
-        const variationText = exportBranchFromTree(node, node.children[i]);
-        if (variationText) {
-            parts.push(`(${variationText})`);
-        }
-    }
-    const mainContinuation = exportFromNode(mainChild);
-    if (mainContinuation) {
-        parts.push(mainContinuation);
-    }
-
-    return parts.join(' ').replace(/\s+/g, ' ').trim();
-}
-
 function buildExportPgn() {
-    if (!moveNavigator || !moveNavigator.root) {
+    if (!moveNavigator || !moveNavigator.root || !moveNavigator.document) {
         return '';
     }
-    return exportFromNode(moveNavigator.root);
+    return moveNavigator.serializePgn();
 }
 
 function copyTextFallback(text) {
@@ -717,6 +896,7 @@ function syncUiToNavigator(clearFeedback = true) {
     if (renderer) {
         nodeMap = renderer.buildNodeMap();
     }
+    setActiveAnnotationsFromCurrentNode();
     globalBoard = moveNavigator.getCurrentFen();
     setupBoard(globalBoard);
     renderPgnDisplay();
@@ -724,6 +904,7 @@ function syncUiToNavigator(clearFeedback = true) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentCommentPanel('');
     setupBoard(globalBoard);
     updateUnlockControlState();
     initializePromotionOverlayEvents();
@@ -731,6 +912,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('pointermove', onGlobalPointerMove, { passive: false });
     document.addEventListener('pointerup', onGlobalPointerUp);
     document.addEventListener('pointercancel', onGlobalPointerCancel);
+    window.addEventListener('resize', renderBoardAnnotations);
     
     // Initialize moveNavigator
     moveNavigator = new MoveTreeNavigator();
@@ -1092,4 +1274,6 @@ function setupBoard(fen) {
         });
         cellIsWhite = !cellIsWhite;
     });
+
+    renderBoardAnnotations();
 }

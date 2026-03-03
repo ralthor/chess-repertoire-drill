@@ -30,6 +30,11 @@ Mobile-first chess line trainer for studying PGN repertoires with an interactive
 
 No build step or server is required for basic local usage.
 
+## Automated Tests
+
+1. Install dependencies with `npm install`.
+2. Run parser/serializer tests with `npm test`.
+
 ## Controls
 
 - `Import PGN`: Open PGN import panel (`Load PGN` or `Close`).
@@ -42,6 +47,7 @@ No build step or server is required for basic local usage.
 - `Export FEN`: Copy current board FEN.
 - `Analysis`: Open Lichess analysis in a new tab for the current FEN.
 - `Flip Board`: Switch board orientation (moved to lower controls for better mobile spacing).
+- `Current Comment` panel: Displays the annotation text for the currently selected move.
 
 ## Keyboard Shortcuts
 
@@ -57,6 +63,42 @@ No build step or server is required for basic local usage.
 - `style.css` - board, panel, and responsive styling
 - `logic.js` - PGN parsing, move tree model, navigation, renderer
 - `script.js` - UI behavior, board interaction, import/export flow
+- `tests/` - parser and serializer fixtures/unit tests (`node:test`)
+
+## PGN Annotation Support
+
+Supported syntax:
+
+- Standard comments: `{...}` and `; ...` (end-of-line)
+- Variations: `( ... )`
+- Numeric NAGs: `$1`, `$2`, ...
+- Vendor tags inside comments:
+  - Arrows: `[%cal Gg1f3,Rd1d7]`
+  - Square highlights: `[%csl Ge4,Re5]`
+  - Colors: `G`, `R`, `Y`, `B`
+
+Runtime behavior:
+
+- The board overlay draws all `%cal` arrows and `%csl` squares for the current move.
+- The `Current Comment` panel shows the non-tag comment text for that move.
+- Multiple arrows/squares per comment are supported.
+
+Internal representation:
+
+```js
+Comment {
+  text: "human text only",
+  rawText: "original comment content",
+  kind: "brace" | "line",
+  tags: {
+    cal: Arrow[],
+    csl: SquareMark[]
+  }
+}
+
+Arrow { color: "G" | "R" | "Y" | "B", from: "g1", to: "f3" }
+SquareMark { color: "G" | "R" | "Y" | "B", square: "e4" }
+```
 
 ## Notes
 
@@ -65,3 +107,4 @@ No build step or server is required for basic local usage.
 - Import overlays can be closed without applying changes.
 - Drag-drop and click-click share the same validation flow (promotion, PGN branch matching, warnings, and unlock behavior).
 - Press `Esc` to close overlays and cancel an in-progress drag gesture.
+- Parser round-trip behavior: unchanged documents export their original PGN text; dirty trees use canonical serialization while preserving comments, NAGs, headers, and result.

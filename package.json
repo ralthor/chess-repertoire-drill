@@ -1,0 +1,11 @@
+{
+  "name": "chess-trainer",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "chess.js": "0.10.3"
+  }
+}
